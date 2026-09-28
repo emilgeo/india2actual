@@ -42,8 +42,6 @@ Pushing straight into Actual (instead of writing a CSV):
   --account <name|id>   Which Actual account to import into. Required for --push.
   --dry-run             With --push, report what would change without writing.
 
-  --push needs the API package: npm install @actual-app/api
-
 Settings come from a .env file in the current directory, or from real
 environment variables, which take precedence. Never from flags, which would
 end up in your shell history. Copy .env.example to .env to get started.

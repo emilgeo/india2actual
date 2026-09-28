@@ -155,8 +155,9 @@ export async function pushTransactions(
     api = (await import(specifier)) as unknown as ActualApi;
   } catch {
     throw new Error(
-      'The --push option needs the Actual API package:\n' +
-        '  npm install @actual-app/api',
+      '--push needs @actual-app/api, which installs automatically as an\n' +
+        'optional dependency. Reinstall with optional dependencies enabled:\n' +
+        '  npm install --include=optional india2actual',
     );
   }
 
