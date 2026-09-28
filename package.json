@@ -27,7 +27,7 @@
     "converter"
   ],
   "bin": {
-    "india2actual": "./dist/cli.js"
+    "india2actual": "dist/cli.js"
   },
   "type": "module",
   "files": [
