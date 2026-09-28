@@ -1,19 +1,46 @@
 {
-  "name": "actual-india-import",
+  "name": "india2actual",
   "version": "0.1.0",
   "description": "Convert Indian bank statements (CSV, XLS, PDF) into Actual Budget transactions with real merchant names",
   "license": "MIT",
   "author": "emilgeo",
+  "homepage": "https://github.com/emilgeo/india2actual#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emilgeo/india2actual.git"
+  },
+  "bugs": {
+    "url": "https://github.com/emilgeo/india2actual/issues"
+  },
+  "keywords": [
+    "actual",
+    "actual-budget",
+    "budgeting",
+    "personal-finance",
+    "india",
+    "indian-banks",
+    "upi",
+    "bank-statement",
+    "csv",
+    "pdf",
+    "importer",
+    "converter"
+  ],
   "bin": {
-    "actual-india-import": "./dist/cli.js"
+    "india2actual": "./dist/cli.js"
   },
   "type": "module",
+  "files": [
+    "dist",
+    ".env.example"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "csv-parse": "^7.0.2",
@@ -23,20 +50,14 @@
     "node-html-parser": "^9.0.4",
     "pdfjs-dist": "^6.3.289"
   },
+  "optionalDependencies": {
+    "@actual-app/api": "^26.9.0"
+  },
   "devDependencies": {
-    "@actual-app/api": "^26.9.0",
     "@types/node": "^22.10.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^5.0.1"
-  },
-  "peerDependencies": {
-    "@actual-app/api": ">=25.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@actual-app/api": {
-      "optional": true
-    }
   },
   "engines": {
     "node": ">=22"

@@ -1,4 +1,4 @@
-# actual-india-import
+# india2actual
 
 Convert Indian bank statements into [Actual Budget](https://actualbudget.org)
 transactions, with **real merchant names instead of UPI reference strings**.
@@ -44,19 +44,23 @@ The original narration is always preserved, never discarded.
 
 ## Install
 
-Needs Node 22 or newer.
+Needs Node 22 or newer. Nothing to install: `npx` fetches it on first use.
 
 ```bash
-git clone https://github.com/emilgeo/actual-india-import.git
-cd actual-india-import
-npm install
+npx india2actual statement.csv
+```
+
+Install it properly if you run it often:
+
+```bash
+npm install -g india2actual
 ```
 
 ## Usage
 
 ```bash
-npx tsx src/cli.ts statement.csv          # writes statement.actual.csv
-npx tsx src/cli.ts statement.pdf --stdout # preview without writing
+india2actual statement.csv          # writes statement.actual.csv
+india2actual statement.pdf --stdout # preview without writing
 ```
 
 Then import the generated CSV through Actual's **Import transactions** dialog,
@@ -112,7 +116,7 @@ Real environment variables take precedence over the file, so a one-off override
 works without editing it:
 
 ```bash
-ACTUAL_SYNC_ID=other-budget npx tsx src/cli.ts statement.pdf --push --account Savings
+ACTUAL_SYNC_ID=other-budget india2actual statement.pdf --push --account Savings
 ```
 
 | Setting                      | Purpose                                               |
@@ -129,14 +133,12 @@ included.
 
 ## Pushing straight into Actual
 
-Needs the API package: `npm install @actual-app/api`.
-
 ```bash
 # Always preview first.
-npx tsx src/cli.ts statement.pdf --push --account "ICICI Savings" --dry-run
+india2actual statement.pdf --push --account "ICICI Savings" --dry-run
 # [dry run] ICICI Savings: would add 34, would update 0.
 
-npx tsx src/cli.ts statement.pdf --push --account "ICICI Savings"
+india2actual statement.pdf --push --account "ICICI Savings"
 ```
 
 `--dry-run` maps onto Actual's own preview mode, so nothing is written.
@@ -155,9 +157,9 @@ The tool reads its own output, so you can check and correct the CSV before
 anything reaches your budget:
 
 ```bash
-npx tsx src/cli.ts statement.pdf
+india2actual statement.pdf
 $EDITOR statement.actual.csv
-npx tsx src/cli.ts statement.actual.csv --push --account "ICICI Savings"
+india2actual statement.actual.csv --push --account "ICICI Savings"
 ```
 
 Payees you edited are kept verbatim; converted output is passed through, not
@@ -197,7 +199,7 @@ The built-in map covers common Indian merchants. Add your own in JSON:
 ```
 
 ```bash
-npx tsx src/cli.ts statement.csv --merchants my-merchants.json
+india2actual statement.csv --merchants my-merchants.json
 ```
 
 Patterns match a lowercased, punctuation-stripped form of the VPA local-part or
@@ -264,8 +266,13 @@ No real statement data belongs in this repository. Fixtures are synthetic.
 ## Development
 
 ```bash
+git clone https://github.com/emilgeo/india2actual.git
+cd india2actual
+npm install
+
 npm test
 npm run typecheck
+npm run dev -- statement.csv   # run the CLI from source
 ```
 
 ## License

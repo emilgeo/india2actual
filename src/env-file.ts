@@ -6,7 +6,7 @@ import { env, loadEnvFile } from 'node:process';
  * Uses Node's built-in loader rather than a dependency, which also fixes the
  * precedence at the behaviour we want: variables already present in the
  * environment are *not* overwritten. So a `.env` supplies the defaults while a
- * one-off `ACTUAL_SYNC_ID=other actual-india-import ...` still wins, and CI can
+ * one-off `ACTUAL_SYNC_ID=other india2actual ...` still wins, and CI can
  * inject secrets without a file existing at all.
  *
  * Requires Node >= 22 (see `engines` in package.json).

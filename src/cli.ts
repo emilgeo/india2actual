@@ -18,10 +18,10 @@ import { pushTransactions } from './out/push.js';
 import type { PushConfig } from './out/push.js';
 
 const USAGE = `
-actual-india-import — convert Indian bank statements for Actual Budget
+india2actual — convert Indian bank statements for Actual Budget
 
 Usage:
-  actual-india-import <statement-file> [options]
+  india2actual <statement-file> [options]
 
 Options:
   --out <path>          Where to write the normalised CSV.
