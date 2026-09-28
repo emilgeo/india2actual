@@ -1,5 +1,8 @@
 # india2actual
 
+[![npm](https://img.shields.io/npm/v/india2actual)](https://www.npmjs.com/package/india2actual)
+[![license](https://img.shields.io/npm/l/india2actual)](LICENSE)
+
 Convert Indian bank statements into [Actual Budget](https://actualbudget.org)
 transactions, with **real merchant names instead of UPI reference strings**.
 
