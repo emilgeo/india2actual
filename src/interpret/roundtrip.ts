@@ -101,6 +101,7 @@ export function interpretConvertedOutput(table: Table): Interpreted {
     transactions,
     skipped,
     header: { index: 0, map: CONVERTED_MAP },
+    card: false,
     // References were already checked for uniqueness when the CSV was written.
     droppedRefs: 0,
   };

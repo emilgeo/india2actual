@@ -317,6 +317,51 @@ describe('parseNarration bank postings', () => {
   });
 });
 
+describe('parseNarration with credit card narrations', () => {
+  const merchants: Array<[string, string]> = [
+    ['IND*LINKEDIN PREMIUM WWW.LINKEDIN.COM IN', 'LinkedIn'],
+    ['IND*AMAZON HTTPS://WWW.A IN', 'Amazon'],
+    ['IND*AMAZON.IN - PHARMACY', 'Amazon'],
+    ['Adobe Systems Software I Pune IN', 'Adobe'],
+    ['HDFC ERGO GENERAL IN', 'HDFC Ergo'],
+    ['GODADDY INDIA HOSTING PUNE IN', 'GoDaddy'],
+    ['SMULE MONTHLY SMULE.COM US', 'Smule'],
+    ['RELIANCE JIO INFOCOMM PUNE IN', 'Jio'],
+    ['YOUTUBE PREMIUM SI DELHI IN', 'Google'],
+  ];
+
+  for (const [raw, merchant] of merchants) {
+    it(`names ${raw} as ${merchant}`, () => {
+      expect(parseNarration(raw).merchant).toBe(merchant);
+    });
+  }
+
+  it('names card payments rather than the word Recd', () => {
+    for (const raw of [
+      'AUTODEBIT PAYMENT RECD.',
+      'Infinity payment received - thank you',
+      'bbps payment received',
+    ]) {
+      expect(parseNarration(raw).merchant).toBe('Credit Card Payment');
+    }
+  });
+
+  it('names card fees and taxes', () => {
+    expect(parseNarration('IGST-CI@9%').merchant).toBe('GST');
+    expect(parseNarration('DCC FEE').merchant).toBe('Foreign Currency Fee');
+    expect(parseNarration('Auto Debit Return Fee').merchant).toBe(
+      'Autopay Return Fee',
+    );
+  });
+
+  it('does not read a UPI note saying payment received as a card payment', () => {
+    expect(
+      parseNarration('UPI/412345678901/JOHN DOE/johndoe@oksbi/Payment received')
+        .merchant,
+    ).toBe('John Doe');
+  });
+});
+
 /**
  * Federal Bank prefixes narrations with its own channel codes, which are not
  * payees and which also carry the route information.

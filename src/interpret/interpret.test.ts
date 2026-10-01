@@ -5,7 +5,7 @@ import type { Table } from '../extract/types.js';
 import { findHeader } from './header.js';
 import { interpretTable } from './rows.js';
 import type { StatementTransaction } from './rows.js';
-import { validateBalances } from './validate.js';
+import { validateBalances, validateCardTotals } from './validate.js';
 import { parseAmount, parseStatementDate } from './values.js';
 
 function table(rows: string[][]): Table {
@@ -347,5 +347,115 @@ describe('validateBalances', () => {
 
     expect(result.status).toBe('skipped');
     expect(result.issues[0]).toContain('No balance column');
+  });
+});
+
+describe('credit card statements', () => {
+  const header = ['Date', 'Transaction Details', 'Amount (in ₹)'];
+  const body = [
+    ['12/03/2025', 'AUTODEBIT PAYMENT RECD.', '725.00 CR'],
+    ['05/03/2025', 'NETFLIX DI SI DELHI IN', '430.00'],
+    ['09/03/2025', 'ACME STORE PUNE IN', '120.00'],
+  ];
+
+  const card = (
+    rows: string[][],
+    preamble: string[] = ['CREDIT CARD STATEMENT'],
+  ) => interpretTable({ ...table([header, ...rows]), preamble });
+
+  it('detects a card statement from the text above the table', () => {
+    expect(card(body)?.card).toBe(true);
+    expect(card(body, ['Statement of Account'])?.card).toBe(false);
+  });
+
+  it('detects a card statement from rows above a spreadsheet header', () => {
+    const result = interpretTable(
+      table([['Credit Card Statement'], header, ...body]),
+    );
+
+    expect(result?.card).toBe(true);
+  });
+
+  it('records spending as money out and a credit as money in', () => {
+    expect(card(body)?.transactions.map(t => t.amount)).toEqual([
+      725, -430, -120,
+    ]);
+  });
+
+  it('reads a negative figure as a credit', () => {
+    const result = card([
+      ['20/02/2025', 'AUTODEBIT PAYMENT RECD.', '-910.00'],
+    ]);
+
+    expect(result?.transactions[0]?.amount).toBe(910);
+  });
+
+  it('reads a bank statement the other way round', () => {
+    const result = card(body, ['Statement of Account']);
+
+    expect(result?.transactions.map(t => t.amount)).toEqual([725, 430, 120]);
+  });
+
+  it('lets the caller force the convention', () => {
+    const result = interpretTable(table([header, ...body]), { card: true });
+
+    expect(result?.transactions.map(t => t.amount)).toEqual([
+      725, -430, -120,
+    ]);
+  });
+});
+
+describe('validateCardTotals', () => {
+  const figures = [
+    { label: 'Purchases / Charges', value: '550.00' },
+    { label: 'Cash Advances', value: '0.00' },
+    { label: 'Payments / Credits', value: '`1,000.00' },
+  ];
+
+  it('passes when spending and payments both match the summary', () => {
+    const result = validateCardTotals(
+      transactionsOf([
+        [-430, 0],
+        [-120, 0],
+        [1000, 0],
+      ]),
+      figures,
+    );
+
+    expect(result).toMatchObject({ status: 'passed', checked: 2, matched: 2 });
+  });
+
+  it('fails when a row is dropped', () => {
+    const result = validateCardTotals(
+      transactionsOf([
+        [-430, 0],
+        [1000, 0],
+      ]),
+      figures,
+    );
+
+    expect(result.status).toBe('failed');
+    expect(result.issues[0]).toContain('550.00');
+    expect(result.issues[0]).toContain('430.00');
+  });
+
+  it('fails when every sign is inverted', () => {
+    const result = validateCardTotals(
+      transactionsOf([
+        [430, 0],
+        [120, 0],
+        [-1000, 0],
+      ]),
+      figures,
+    );
+
+    expect(result.status).toBe('failed');
+    expect(result.matched).toBe(0);
+  });
+
+  it('reports honestly when the statement has no summary', () => {
+    const result = validateCardTotals(transactionsOf([[-430, 0]]));
+
+    expect(result.status).toBe('skipped');
   });
 });

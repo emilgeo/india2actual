@@ -9,7 +9,10 @@ import {
   isConvertedOutput,
 } from './interpret/roundtrip.js';
 import { interpretTable } from './interpret/rows.js';
-import { validateBalances } from './interpret/validate.js';
+import {
+  validateBalances,
+  validateCardTotals,
+} from './interpret/validate.js';
 import type { DateOrder } from './interpret/values.js';
 import { loadMerchantRules } from './merchants-file.js';
 import type { MerchantRule } from './narration/merchants.js';
@@ -32,6 +35,8 @@ Options:
   --delimiter <char>    Force the CSV delimiter instead of detecting it.
   --merchants <path>    JSON file of { pattern, name } merchant rules, which
                         take precedence over the built-in map.
+  --card                Read the file as a credit card statement. Normally
+                        detected from the statement itself.
   --env-file <path>     Read settings from this file instead of ./.env.
   --force               Write the CSV even if the balance check fails.
   --quiet               Only report problems.
@@ -67,6 +72,7 @@ type Options = {
   dateOrder: DateOrder;
   delimiter?: string;
   merchants?: string;
+  card: boolean;
   force: boolean;
   quiet: boolean;
   push: boolean;
@@ -86,6 +92,7 @@ function parseArgs(args: string[]): Options | null {
     dateOrder: 'dmy',
     force: false,
     quiet: false,
+    card: false,
     push: false,
     dryRun: false,
   };
@@ -121,6 +128,9 @@ function parseArgs(args: string[]): Options | null {
         break;
       case '--merchants':
         options.merchants = next();
+        break;
+      case '--card':
+        options.card = true;
         break;
       case '--env-file':
         options.envFile = next();
@@ -231,6 +241,7 @@ async function run(args: string[]): Promise<number> {
     ? interpretConvertedOutput(table)
     : interpretTable(table, {
         dateOrder: options.dateOrder,
+        ...(options.card ? { card: true } : {}),
         ...(merchantRules.length ? { merchantRules } : {}),
       });
 
@@ -243,7 +254,14 @@ async function run(args: string[]): Promise<number> {
     return 1;
   }
 
-  const { transactions, skipped, header, droppedRefs } = result;
+  const { transactions, skipped, header, droppedRefs, card } = result;
+
+  if (card) {
+    log(
+      'Read as a credit card statement: purchases are money out, ' +
+        'payments and credits are money in.',
+    );
+  }
 
   log(
     `Header on row ${header.index + 1}; columns: ${Object.entries(header.map)
@@ -266,12 +284,18 @@ async function run(args: string[]): Promise<number> {
     return 1;
   }
 
-  // The balance column is the only independent check we have that the parse is
-  // right, so a failure blocks the write unless explicitly overridden.
-  const validation = validateBalances(transactions);
+  // The balance column, or a card's printed totals, is the only independent
+  // check that the parse is right, so a failure blocks the write unless
+  // explicitly overridden.
+  const validation = card
+    ? validateCardTotals(transactions, table.figures)
+    : validateBalances(transactions);
+  const checkName = card ? 'Statement totals check' : 'Balance check';
+  const unit = card ? 'totals' : 'rows';
+
   if (validation.status === 'failed') {
     stderr.write(
-      `Balance check FAILED (${validation.matched}/${validation.checked} rows agree).\n`,
+      `${checkName} FAILED (${validation.matched}/${validation.checked} ${unit} agree).\n`,
     );
     for (const issue of validation.issues) {
       stderr.write(`  ${issue}\n`);
@@ -286,11 +310,11 @@ async function run(args: string[]): Promise<number> {
     stderr.write('Writing anyway because --force was given.\n');
   } else if (validation.status === 'passed') {
     log(
-      `Balance check passed (${validation.matched}/${validation.checked} rows, ` +
-        `${validation.order} order).`,
+      `${checkName} passed (${validation.matched}/${validation.checked} ${unit}` +
+        `${validation.order ? `, ${validation.order} order` : ''}).`,
     );
   } else {
-    log(`Balance check skipped: ${validation.issues[0] ?? 'no balance data'}`);
+    log(`${checkName} skipped: ${validation.issues[0] ?? 'no balance data'}`);
     if (converted) {
       // Said plainly, because it is the one real cost of the round trip: the
       // CSV carries no balance column, so these amounts are not independently

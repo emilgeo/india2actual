@@ -6,14 +6,29 @@ CSV or pushed directly through Actual's API.
 
 ## The rule that matters most: no real statement data
 
-**Never put real transaction data into source, tests, fixtures or comments.**
-Not account numbers, UTR/RRN references, VPAs, IFSC codes, counterparty names,
-phone numbers, or verbatim narrations. This is a public repository and the data
-is financial.
+**Never put real transaction data into source, tests, fixtures, comments, docs
+or commit messages.** "Real" means any value that came from an actual statement,
+not only the ones that identify a person. That covers account and card numbers,
+UTR/RRN and serial references, VPAs, IFSC codes, counterparty names, phone
+numbers, addresses, passwords, and also **amounts, balances, summary totals,
+dates and merchant descriptors**. An amount next to a date and a merchant is a
+real transaction even though none of the three identifies anyone alone. This is
+a public repository and the data is financial.
 
-When someone reports a parsing bug they will paste a narration straight from
-their bank statement. That line is real data. Build a structurally identical
-fake instead, and never commit the original.
+When someone reports a parsing bug, or gives you statements to work with, the
+lines they paste are real data. Build a structurally identical fake from
+scratch and never commit the original.
+
+**Invent the fake before writing the test, do not copy and then edit.** Every
+value in a fixture should be one you chose, not one you saw. Changing only the
+reference or the name while keeping the real amount and date is the usual way
+this rule gets broken.
+
+**Before staging, check the diff against what you read.** If you inspected a
+real statement while working, search the staged changes for its amounts, dates,
+descriptors and references, and fix every hit. Do this before reporting the work
+as done, not after being asked. Keep any dumps of real statements in the
+scratchpad only, never in the repository, and do not paste them into comments.
 
 Established fake values, already used throughout the tests:
 
@@ -26,6 +41,17 @@ Established fake values, already used throughout the tests:
 | Person           | `JOHN DOE`, `A N OTHER`, `Mr A N OTHE` |
 | Company          | `ACME CONSULTING PVT LTD`              |
 | VPA              | `swiggy@ybl`, `johndoe@oksbi`          |
+| Card number      | `4000XXXXXXXX0000`                     |
+| Amount           | `725.00`, `430.00` (made up)           |
+| Date             | `12/03/2025` (made up)                 |
+| Descriptor       | `ACME STORE PUNE IN`                   |
+
+For amounts, dates and descriptors the point is that you invented them: keep
+the shape of what you saw, change every value.
+
+Fake summary totals must stay internally consistent, because the totals check
+reads them. Make purchases and payments differ, otherwise reversed signs swap
+two equal numbers and a sign test passes by accident.
 
 **Preserve the digit _arrangement_, not just the shape.** The parser branches on
 things like how many digit groups a token has, so a fake that changes the
@@ -35,7 +61,8 @@ opaque reference, while `TCSInterimDiv03022026` has one and is treated as a
 name. Faking the digits is right; dropping the `3rd` is not.
 
 Naming a public company that is already in the merchant map is fine. Naming a
-real individual, or reproducing real references, is not.
+real individual, or reproducing real references, amounts or descriptors, is not.
+Column positions and other page geometry are layout, not data, and may be kept.
 
 ## Commands
 
@@ -101,6 +128,13 @@ Do not relitigate these without a reason:
   appear at other lengths and are not unique per transaction, and a repeated
   `imported_id` makes Actual treat distinct transactions as the same one and
   drop them. No id is better than a wrong one.
+- **Credit card statements are read with the card sign convention and checked
+  against their own totals.** A card prints spending as a plain positive figure
+  and marks only credits, the reverse of a bank statement, so amounts are
+  flipped. There is no running balance, so the parsed rows must add up to the
+  purchases and payments totals the statement prints, and a mismatch is refused
+  unless `--force`. A statement with no printed totals is reported as
+  unchecked, never as passed.
 - **Secrets come from `.env` or real environment variables, never CLI flags**,
   which would land in shell history.
 

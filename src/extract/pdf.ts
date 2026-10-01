@@ -3,7 +3,7 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { roleForHeader } from '../interpret/synonyms.js';
 import { parseStatementDate } from '../interpret/values.js';
 
-import type { Table } from './types.js';
+import type { Figure, Table } from './types.js';
 
 export type PdfExtractOptions = {
   password?: string;
@@ -48,6 +48,23 @@ const SHORT_LINE_MARGIN = 8;
  * and its toll-free number ended up inside a narration and an amount.
  */
 const MAX_CONTINUATION_BELOW = 40;
+
+/** Widest gap between two lines of one wrapped cell. A footer or section title sits further off. */
+const MAX_LINE_GAP = 16;
+
+/** How far left of the header's first label a cell's text may start. */
+const TABLE_LEFT_MARGIN = 40;
+
+/** Share of the next column an item must cover to count as crossing a gutter. */
+const GUTTER_CROSSING = 0.5;
+
+/**
+ * A date at the start of a text item. `parseStatementDate` alone reads any three
+ * numbers as a date, so terms prose such as `5% of 1,00,000 + 7,800` becomes a
+ * row as wide as the page and collapses the columns into one.
+ */
+const LEADING_DATE =
+  /^\s*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[\s\-/.]+(\d{1,2}|[a-z]{3,9})[\s\-/.,]+\d{2,4})(?!\d)/i;
 
 async function readLines(
   path: string,
@@ -116,7 +133,10 @@ function clusterLines(items: Item[], page: number): Line[] {
  * inference depends on this and must not depend on columns in turn.
  */
 function isAnchorLine(line: Line): boolean {
-  return line.items.some(item => parseStatementDate(item.text) !== null);
+  return line.items.some(
+    item =>
+      LEADING_DATE.test(item.text) && parseStatementDate(item.text) !== null,
+  );
 }
 
 /**
@@ -177,10 +197,14 @@ function firstHeaderIndex(lines: Line[]): number {
  */
 function tableLines(lines: Line[]): Line[] {
   const header = firstHeaderIndex(lines);
+  const firstAnchor = lines.findIndex(
+    (line, index) => index > header && isAnchorLine(line),
+  );
 
   return lines.filter((line, index) => {
     if (isHeaderLine(line)) {
-      return true;
+      // Header-like labels on later pages (terms tables) would bridge gutters.
+      return firstAnchor < 0 || index < firstAnchor;
     }
     return isAnchorLine(line) && (header < 0 || index > header);
   });
@@ -294,6 +318,20 @@ function bandOf(item: { x: number; right: number }, bands: Band[]): number {
   return toTheRight >= 0 ? toTheRight : Math.max(0, bands.length - 1);
 }
 
+/** Text inside a table never spans a gutter, so such a line is furniture. */
+function isFurnitureLine(line: Line, bands: Band[]): boolean {
+  return line.items.some(item =>
+    bands.some((band, index) => {
+      const next = bands[index + 1];
+      if (!next || item.x >= band.right || item.right <= next.left) {
+        return false;
+      }
+      const covered = Math.min(item.right, next.right) - next.left;
+      return covered >= (next.right - next.left) * GUTTER_CROSSING;
+    }),
+  );
+}
+
 /** Split one line into per-column fragments. */
 function toFragments(
   line: Line,
@@ -385,10 +423,57 @@ function mergeHeader(rows: Array<Array<Fragment | undefined>>): string[] {
   return merged;
 }
 
+/** Drops text left of the table, such as a chart label beside a row. */
+export function trimToTable(lines: Line[]): Line[] {
+  const header = firstHeaderIndex(lines);
+  if (header < 0) {
+    return lines;
+  }
+
+  const labels: Item[] = [];
+  for (const line of lines.slice(header)) {
+    if (isAnchorLine(line)) {
+      break;
+    }
+    if (isHeaderLine(line)) {
+      labels.push(...line.items);
+    }
+  }
+
+  const left = Math.min(...labels.map(item => item.x)) - TABLE_LEFT_MARGIN;
+  return lines
+    .map(line => ({
+      ...line,
+      items: line.items.filter(item => item.right > left),
+    }))
+    .filter(line => line.items.length);
+}
+
 export function assembleRows(lines: Line[], bands: Band[]): string[][] {
   const fragmentsFor = lines.map(line => toFragments(line, bands));
   const isAnchor = lines.map(isAnchorLine);
   const isHeader = lines.map(isHeaderLine);
+  // Dates never wrap, so text under a date column belongs to no row.
+  const dateBands = new Set<number>();
+  for (const [index, line] of lines.entries()) {
+    if (isAnchor[index]) {
+      for (const item of line.items) {
+        if (LEADING_DATE.test(item.text)) {
+          dateBands.add(bandOf(item, bands));
+        }
+      }
+    }
+  }
+
+  // Lines that can never continue a row, whatever their position.
+  const isExcluded = lines.map(
+    (line, index) =>
+      isHeader[index] ||
+      isSummaryLine(line) ||
+      isFurnitureLine(line, bands) ||
+      (!isAnchor[index] &&
+        line.items.some(item => dateBands.has(bandOf(item, bands)))),
+  );
   const widths = wrapWidths(fragmentsFor);
 
   const rows: string[][] = [];
@@ -428,14 +513,17 @@ export function assembleRows(lines: Line[], bands: Band[]): string[][] {
       continue;
     }
 
+    const previous =
+      previousAnchor === undefined ? undefined : lines[previousAnchor];
+    // The lowest line of the previous row so far.
+    let rowBottom = previous?.y ?? 0;
+
     for (let index = start; index < anchorIndex; index += 1) {
       const line = lines[index];
-      if (!line || isHeader[index] || isSummaryLine(line)) {
+      if (!line || isExcluded[index]) {
         continue;
       }
 
-      const previous =
-        previousAnchor === undefined ? undefined : lines[previousAnchor];
       const gap = line.y - anchor.y;
 
       // Requiring the same page, and a small *positive* gap, is what keeps a
@@ -448,9 +536,11 @@ export function assembleRows(lines: Line[], bands: Band[]): string[][] {
         previousAnchor !== undefined &&
         previous &&
         previous.page === line.page &&
-        previous.y - line.y <= MAX_CONTINUATION_BELOW
+        previous.y - line.y <= MAX_CONTINUATION_BELOW &&
+        rowBottom - line.y <= MAX_LINE_GAP
       ) {
         owner.set(index, previousAnchor);
+        rowBottom = line.y;
       }
       // Otherwise it belongs to no transaction on this page (a preamble,
       // page header or footer) and is dropped.
@@ -463,16 +553,18 @@ export function assembleRows(lines: Line[], bands: Band[]): string[][] {
   const lastAnchorLine =
     lastAnchor === undefined ? undefined : lines[lastAnchor];
   if (lastAnchor !== undefined && lastAnchorLine) {
+    let rowBottom = lastAnchorLine.y;
     for (let index = lastAnchor + 1; index < lines.length; index += 1) {
       const line = lines[index];
       if (
-        !isHeader[index] &&
         line &&
-        !isSummaryLine(line) &&
+        !isExcluded[index] &&
         line.page === lastAnchorLine.page &&
-        lastAnchorLine.y - line.y <= MAX_CONTINUATION_BELOW
+        lastAnchorLine.y - line.y <= MAX_CONTINUATION_BELOW &&
+        rowBottom - line.y <= MAX_LINE_GAP
       ) {
         owner.set(index, lastAnchor);
+        rowBottom = line.y;
       }
     }
   }
@@ -533,15 +625,67 @@ export function assembleRows(lines: Line[], bands: Band[]): string[][] {
   return rows;
 }
 
+const FIGURE = /^[^\d-]{0,3}-?[\d,]+\.\d{2}$/;
+
+/** How far below its label a summary figure may be printed. */
+const MAX_FIGURE_BELOW = 30;
+
+function overlap(a: Item, b: Item): number {
+  return Math.min(a.right, b.right) - Math.max(a.x, b.x);
+}
+
+/** Pairs each amount with the nearest label above it that it sits under. */
+export function readFigures(lines: Line[]): Figure[] {
+  const figures: Figure[] = [];
+
+  for (const [index, line] of lines.entries()) {
+    for (const item of line.items.filter(i => FIGURE.test(i.text.trim()))) {
+      for (let above = index - 1; above >= 0; above -= 1) {
+        const candidate = lines[above];
+        if (
+          !candidate ||
+          candidate.page !== line.page ||
+          candidate.y - line.y > MAX_FIGURE_BELOW
+        ) {
+          break;
+        }
+
+        const label = candidate.items
+          .filter(
+            other =>
+              letterRun.test(other.text) &&
+              !/\d/.test(other.text) &&
+              overlap(other, item) > 0,
+          )
+          .sort((a, b) => overlap(b, item) - overlap(a, item))[0];
+
+        if (label) {
+          figures.push({ label: label.text.trim(), value: item.text.trim() });
+          break;
+        }
+      }
+    }
+  }
+
+  return figures;
+}
+
+const letterRun = /[a-z]{3}/i;
+
 export async function extractPdf(
   path: string,
   options: PdfExtractOptions = {},
 ): Promise<Table> {
-  const { lines, pages } = await readLines(path, options);
+  const { lines: allLines, pages } = await readLines(path, options);
+  const lines = trimToTable(allLines);
   const bands = inferBands(lines);
+
+  const above = allLines.slice(0, Math.max(0, firstHeaderIndex(allLines)));
 
   return {
     rows: assembleRows(lines, bands),
+    preamble: above.map(line => line.items.map(item => item.text).join(' ')),
+    figures: readFigures(above),
     source: { path, format: 'pdf', part: `${pages} page(s)` },
   };
 }

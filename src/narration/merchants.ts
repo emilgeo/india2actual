@@ -32,7 +32,7 @@ export const MERCHANT_RULES: MerchantRule[] = [
   { pattern: /^dunzo/, name: 'Dunzo' },
 
   // Commerce
-  { pattern: /^amazon/, name: 'Amazon' },
+  { pattern: /^(ind)?amazon/, name: 'Amazon' },
   { pattern: /^(flipkart|fkrt)/, name: 'Flipkart' },
   { pattern: /^myntra/, name: 'Myntra' },
   { pattern: /^(ajio|relianceretail)/, name: 'AJIO' },
@@ -60,7 +60,7 @@ export const MERCHANT_RULES: MerchantRule[] = [
 
   // Utilities & telecom
   { pattern: /^(airtel|bhartiairtel)/, name: 'Airtel' },
-  { pattern: /^(jio|reliancejio)/, name: 'Jio' },
+  { pattern: /^(jio|reliancejio|infocomm)/, name: 'Jio' },
   { pattern: /^(vi|vodafone|idea)$/, name: 'Vi' },
   { pattern: /^bsnl/, name: 'BSNL' },
   { pattern: /^(actfibernet|act)$/, name: 'ACT Fibernet' },
@@ -79,6 +79,13 @@ export const MERCHANT_RULES: MerchantRule[] = [
   { pattern: /^apple/, name: 'Apple' },
   { pattern: /^(bookmyshow|bigtree)/, name: 'BookMyShow' },
   { pattern: /^(pvr|inox|cinepolis)/, name: 'Cinema' },
+
+  // Software, insurance and services typically billed to a card
+  { pattern: /^(ind)?linkedin/, name: 'LinkedIn' },
+  { pattern: /^adobe/, name: 'Adobe' },
+  { pattern: /^godaddy/, name: 'GoDaddy' },
+  { pattern: /^smule/, name: 'Smule' },
+  { pattern: /^ergo(mumbai|general)/, name: 'HDFC Ergo' },
 
   // Health & pharmacy
   { pattern: /^(pharmeasy|axelia)/, name: 'PharmEasy' },
@@ -138,6 +145,16 @@ export const POSTING_RULES: MerchantRule[] = [
   // Debit card annual fee, e.g. `DCARDFEE0000AUG26-JUL27+GST`.
   { pattern: /dcardfee/, name: 'Debit Card Fee' },
   { pattern: /(atmwdl|cashwdl|nwdcash)/, name: 'ATM Withdrawal' },
+  // Credit card statement lines. Anchored so a free-text UPI note that happens
+  // to say "payment received" is not read as a card payment.
+  {
+    pattern:
+      /^(autodebitpaymentrecd|infinitypaymentreceived|bbpspaymentreceived|paymentreceivedthankyou)/,
+    name: 'Credit Card Payment',
+  },
+  { pattern: /^[ics]gst/, name: 'GST' },
+  { pattern: /^dccfee/, name: 'Foreign Currency Fee' },
+  { pattern: /^autodebitreturnfee/, name: 'Autopay Return Fee' },
 ];
 
 /** Resolve a bank posting type from a full narration, or null. */

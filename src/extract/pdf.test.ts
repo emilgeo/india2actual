@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { interpretTable } from '../interpret/rows.js';
 
-import { assembleRows, inferBands } from './pdf.js';
+import { assembleRows, inferBands, readFigures, trimToTable } from './pdf.js';
 import type { Item, Line } from './pdf.js';
 
 /**
@@ -344,5 +344,133 @@ describe('assembleRows on a Federal-shaped statement', () => {
       balance: 8,
     });
     expect(result?.transactions.map(t => t.amount)).toEqual([-22000, 50000]);
+  });
+});
+
+/**
+ * A card statement: a transaction table beside a chart legend, with a card
+ * number line between rows, a section title below the last row, and a later
+ * page whose terms table carries header-like labels and prose with numbers.
+ */
+function cardLines(): Line[] {
+  const span = (
+    y: number,
+    cells: Array<[number, number, string]>,
+    page = 1,
+  ): Line => ({
+    y,
+    page,
+    items: cells.map(([x, right, text]) => ({ x, right, y, text })),
+  });
+
+  return [
+    span(468, [
+      [208, 221, 'Date'],
+      [262, 280, 'SerNo.'],
+      [305, 358, 'Transaction Details'],
+      [443, 465, 'Reward'],
+      [522, 557, 'Amount (in ₹)'],
+    ]),
+    span(430, [
+      [208, 239, '12/03/2025'],
+      [252, 291, '100000000001'],
+      [305, 380, 'ACME STORE PUNE IN'],
+      [452, 456, '0'],
+      [529, 557, '725.00 CR'],
+    ]),
+    span(415, [[208, 285, '4000XXXXXXXX0000']]),
+    span(402, [
+      [48, 63, '100%'],
+      [208, 239, '05/03/2025'],
+      [252, 291, '100000000002'],
+      [305, 376, 'ACME STREAMING PUNE'],
+      [452, 456, '1'],
+      [538, 557, '120.00'],
+    ]),
+    span(396, [[305, 325, 'URB IN']]),
+    span(381, [
+      [205, 207, '#'],
+      [209, 265, 'International Spends'],
+    ]),
+    span(360, [[235, 361, 'TRANSACTION DETAILS']]),
+
+    span(700, [
+      [134, 189, 'Particulars'],
+      [317, 378, 'Amount in ₹'],
+    ], 2),
+    span(690, [[28, 400, '5% of 1,00,000 + 7,800']], 2),
+  ];
+}
+
+describe('assembleRows on a card statement', () => {
+  const rows = () => {
+    const lines = trimToTable(cardLines());
+    return assembleRows(lines, inferBands(lines));
+  };
+
+  it('takes columns from the first header only', () => {
+    expect(rows()[0]).toEqual([
+      'Date',
+      'SerNo.',
+      'Transaction Details',
+      'Reward',
+      'Amount (in ₹)',
+    ]);
+  });
+
+  it('keeps a prose line with numbers from becoming a row', () => {
+    expect(rows()).toHaveLength(3);
+  });
+
+  it('keeps the card number line out of the row above it', () => {
+    expect(rows().flat().join(' ')).not.toContain('4000XXXXXXXX0000');
+  });
+
+  it('keeps the legend and section title out of the cells', () => {
+    const all = rows().flat().join(' ');
+
+    expect(all).not.toContain('100%');
+    expect(all).not.toContain('International Spends');
+    expect(all).not.toContain('TRANSACTION DETAILS');
+  });
+
+  it('keeps a wrapped description line with its row', () => {
+    expect(rows()[2]?.[2]).toBe('ACME STREAMING PUNE URB IN');
+  });
+
+  it('reads the credit suffix as money in', () => {
+    const result = interpretTable({
+      rows: rows(),
+      source: { path: 'card.pdf', format: 'pdf' },
+    });
+
+    expect(result?.transactions.map(t => t.amount)).toEqual([725, 120]);
+  });
+});
+
+describe('readFigures', () => {
+  const summary = (): Line[] => [
+    line(568, [
+      [81, 'Total Amount due'],
+      [306, 'Purchases / Charges'],
+      [488, 'Payments / Credits'],
+    ]),
+    line(553, [[99, '3,210.40']]),
+    line(550, [
+      [325, '3,210.40'],
+      [502, '`725.00'],
+    ]),
+  ];
+
+  it('pairs each amount with the label above it', () => {
+    expect(readFigures(summary())).toEqual([
+      { label: 'Total Amount due', value: '3,210.40' },
+      { label: 'Purchases / Charges', value: '3,210.40' },
+      { label: 'Payments / Credits', value: '`725.00' },
+    ]);
+  });
+
+  it('ignores an amount with no label close above it', () => {
+    expect(readFigures([line(100, [[99, 'Total']]), line(40, [[99, '9.00']])])).toEqual([]);
   });
 });

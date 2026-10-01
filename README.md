@@ -166,6 +166,32 @@ Balance check FAILED (4/5 rows agree).
 Refusing to write a statement that does not reconcile. Re-run with --force to write it anyway.
 ```
 
+## Credit card statements
+
+Credit card statements work the same way: run the tool on the file and import
+the result into a credit card account in Actual.
+
+```bash
+npx india2actual card-statement.pdf
+```
+
+There is no running balance on a card statement, so the check is different. If
+the statement prints its totals for the period (purchases and payments), the
+tool adds up the rows it read and refuses to write the file if either total is
+off:
+
+```
+Statement totals check FAILED (1/2 totals agree).
+  Purchases and cash advances: the statement says 3210.40 but the parsed rows total 2500.00
+Refusing to write a statement that does not reconcile. Re-run with --force to write it anyway.
+```
+
+Statements that do not print totals, such as a yearly summary, cannot be
+checked, and the tool says so. If a card statement is not recognised and the
+signs come out reversed, add `--card`.
+
+So far this has been tested on ICICI card statements only.
+
 ## Reference
 
 ### Supported files
@@ -187,6 +213,7 @@ Refusing to write a statement that does not reconcile. Re-run with --force to wr
 | `--date-order dmy\|mdy\|ymd` | Only affects all-numeric dates, where `01/02/2024` is ambiguous. Default `dmy`. |
 | `--delimiter <char>`         | Force the CSV delimiter instead of detecting it.                                |
 | `--merchants <path>`         | Your own payee rules. See [above](#fixing-a-payee-name).                        |
+| `--card`                     | Read the file as a credit card statement. Normally detected automatically.      |
 | `--env-file <path>`          | Read settings from this file instead of `./.env`.                               |
 | `--push`                     | Send to Actual directly instead of writing a CSV.                               |
 | `--account <name\|id>`       | Which Actual account to import into. Required with `--push`.                    |
@@ -235,6 +262,10 @@ converted CSV has no balance column, but it already ran when the CSV was made.
   each piece of text sits on the page, which can break when a bank changes its
   layout. The balance check is there to catch this. Use CSV or Excel when your
   bank offers it.
+- **A card statement whose spending equals its payments** cannot reveal
+  reversed signs through the totals check, since both totals swap to the same
+  figure. Detection normally gets the signs right, so this only matters if a
+  card statement is not recognised.
 - **Long text in a PDF may gain or lose a space** where a line wrapped. Dates,
   amounts, payees and references are not affected.
 - **Payee names are a best guess.** Payment gateways often hide the real shop.

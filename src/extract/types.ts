@@ -10,8 +10,15 @@ export type SourceFormat = 'csv' | 'xlsx' | 'pdf';
  * Cells are always strings, exactly as they appeared. Type coercion (dates,
  * amounts) belongs to interpretation, not extraction.
  */
+/** An amount with the label printed over it, both exactly as they appeared. */
+export type Figure = { label: string; value: string };
+
 export type Table = {
   rows: string[][];
+  /** Text above the table. Only PDFs set it: their rows start at the header. */
+  preamble?: string[];
+  /** Labelled amounts above the table, such as a card statement's summary. */
+  figures?: Figure[];
   source: {
     path: string;
     format: SourceFormat;

@@ -35,6 +35,8 @@ export type InterpretResult = {
   transactions: StatementTransaction[];
   skipped: SkippedRow[];
   header: { index: number; map: ColumnMap };
+  /** Whether amounts were read with the credit card sign convention. */
+  card: boolean;
 };
 
 export type InterpretOptions = {
@@ -44,7 +46,18 @@ export type InterpretOptions = {
   columnMap?: ColumnMap;
   /** Force the header row index. */
   headerIndex?: number;
+  /** Force or forbid the credit card sign convention instead of detecting it. */
+  card?: boolean;
 };
+
+const CARD_STATEMENT = /credit\s*card|card\s*(account\s*)?(no\b|number)/i;
+
+function detectCard(table: Table, headerIndex: number): boolean {
+  const above =
+    table.preamble ??
+    table.rows.slice(0, headerIndex).map(row => row.join(' '));
+  return above.some(text => CARD_STATEMENT.test(text));
+}
 
 function cell(row: string[], index: number | undefined): string {
   if (index === undefined) {
@@ -64,7 +77,11 @@ function presentAmount(value: number | null): number | null {
   return value;
 }
 
-function resolveAmount(row: string[], map: ColumnMap): number | null {
+function resolveAmount(
+  row: string[],
+  map: ColumnMap,
+  card: boolean,
+): number | null {
   const debit = presentAmount(parseAmount(cell(row, map.debit)));
   const credit = presentAmount(parseAmount(cell(row, map.credit)));
 
@@ -79,7 +96,8 @@ function resolveAmount(row: string[], map: ColumnMap): number | null {
     // column, and only populate one of them.
   }
 
-  const amount = presentAmount(parseAmount(cell(row, map.amount)));
+  const amountText = cell(row, map.amount);
+  const amount = presentAmount(parseAmount(amountText));
   if (amount === null) {
     return null;
   }
@@ -93,6 +111,12 @@ function resolveAmount(row: string[], map: ColumnMap): number | null {
     if (/^c/.test(indicator)) {
       return Math.abs(amount);
     }
+  }
+
+  // A card statement lists spending as plain positive figures and marks only
+  // credits (`CR`) or prints them negative, the reverse of a bank statement.
+  if (card && !/\b(cr|dr)\b/i.test(amountText)) {
+    return -amount;
   }
 
   return amount;
@@ -168,6 +192,7 @@ export function interpretTable(
     map = map ?? detected.map;
   }
 
+  const card = options.card ?? detectCard(table, headerIndex);
   const transactions: StatementTransaction[] = [];
   const skipped: SkippedRow[] = [];
 
@@ -184,7 +209,7 @@ export function interpretTable(
       continue;
     }
 
-    const amount = resolveAmount(row, map);
+    const amount = resolveAmount(row, map, card);
     if (amount === null) {
       skipped.push({ index, reason: 'no parseable amount', row });
       continue;
@@ -219,6 +244,7 @@ export function interpretTable(
     transactions,
     skipped,
     header: { index: headerIndex, map },
+    card,
     droppedRefs,
   };
 }

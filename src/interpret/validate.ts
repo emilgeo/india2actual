@@ -1,4 +1,7 @@
+import type { Figure } from '../extract/types.js';
+
 import type { StatementTransaction } from './rows.js';
+import { parseAmount } from './values.js';
 
 export type ValidationStatus = 'passed' | 'failed' | 'skipped';
 
@@ -119,4 +122,78 @@ function describe(
 
 function truncate(value: string, limit = 60): string {
   return value.length <= limit ? value : `${value.slice(0, limit - 1)}…`;
+}
+
+const SPENT_LABELS = [/^purchases?/i, /^cash\s*advances?/i];
+const PAID_LABELS = [/^payments?/i];
+
+function figureTotal(figures: Figure[], labels: RegExp[]): number | null {
+  const found = figures.filter(figure =>
+    labels.some(label => label.test(figure.label)),
+  );
+  if (!found.length) {
+    return null;
+  }
+  return found.reduce(
+    (sum, figure) => sum + Math.abs(parseAmount(figure.value) ?? 0),
+    0,
+  );
+}
+
+/**
+ * Verify a credit card statement against the totals it prints for the period.
+ *
+ * A card statement has no running balance, but it states what was spent and
+ * what was paid, so the parsed rows must add up to both.
+ */
+export function validateCardTotals(
+  transactions: StatementTransaction[],
+  figures: Figure[] = [],
+): Validation {
+  const checks: Array<{ name: string; stated: number; parsed: number }> = [];
+  const spent = figureTotal(figures, SPENT_LABELS);
+  const paid = figureTotal(figures, PAID_LABELS);
+
+  if (spent !== null) {
+    checks.push({
+      name: 'Purchases and cash advances',
+      stated: spent,
+      parsed: -transactions.reduce(
+        (sum, t) => sum + Math.min(t.amount, 0),
+        0,
+      ),
+    });
+  }
+  if (paid !== null) {
+    checks.push({
+      name: 'Payments and credits',
+      stated: paid,
+      parsed: transactions.reduce((sum, t) => sum + Math.max(t.amount, 0), 0),
+    });
+  }
+
+  if (!checks.length) {
+    return {
+      status: 'skipped',
+      checked: 0,
+      matched: 0,
+      issues: [
+        'No statement summary found, amounts could not be cross-checked.',
+      ],
+    };
+  }
+
+  const failures = checks.filter(
+    check => Math.abs(check.stated - check.parsed) >= EPSILON,
+  );
+
+  return {
+    status: failures.length ? 'failed' : 'passed',
+    checked: checks.length,
+    matched: checks.length - failures.length,
+    issues: failures.map(
+      check =>
+        `${check.name}: the statement says ${check.stated.toFixed(2)} but the parsed rows total ${check.parsed.toFixed(2)}`,
+    ),
+  };
 }
