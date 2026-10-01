@@ -3,38 +3,31 @@
 [![npm](https://img.shields.io/npm/v/india2actual)](https://www.npmjs.com/package/india2actual)
 [![license](https://img.shields.io/npm/l/india2actual)](LICENSE)
 
-Convert Indian bank statements into [Actual Budget](https://actualbudget.org)
-transactions, with **real merchant names instead of UPI reference strings**.
+Get your Indian bank statements into [Actual Budget](https://actualbudget.org),
+with **real payee names instead of UPI reference strings**.
 
-CSV, Excel, HTML-disguised `.xls` and PDF input all work. Every amount is
-cross-checked against the statement's own balance column.
+## Why this exists
 
-## The problem this solves
+**1. Actual has no bank sync for Indian banks, and is unlikely to get one soon.**
+([more below](#limitations)). The only way to
+get transactions in is to download a statement and import it yourself. This tool
+makes that as painless as it can be: hand it the file your bank gave you (CSV,
+Excel or PDF) and it either produces a clean CSV for Actual or puts the
+transactions straight into your budget.
 
-Actual's CSV importer already handles Indian statements well: lakh grouping
-(`1,23,456.78`), `DD/MM/YYYY` dates and separate Withdrawal/Deposit columns all
-work, and it remembers your column mapping per account.
-
-The gap is the narration column, which embeds a unique reference in every
-transaction:
+**2. UPI transactions are unreadable as they come.** Your bank describes two
+orders from the same shop like this:
 
 ```
 UPI/DR/412345678901/SWIGGY/YESB/swiggy@ybl/Payment
 UPI/DR/419876543210/SWIGGY/YESB/swiggy@ybl/Payment
 ```
 
-Map that to Payee and the same merchant becomes two payees. Within months you
-have hundreds of junk payees, spending-by-payee is meaningless, and category
-learning has nothing to work with.
+Every line has a different reference number, so Actual treats them as two
+different payees. A few months in, you have hundreds of junk payees, reports by
+payee tell you nothing, and Actual cannot learn your categories.
 
-This tool reads the structure inside the narration:
-
-```
-UPI/DR/412345678901/SWIGGY/YESB/swiggy@ybl/Payment
-       reference      name         VPA
-```
-
-and produces something importable:
+This tool pulls the name out of each line, so both become simply `Swiggy`:
 
 | Date       | Payee          | Notes                                                | Amount   |
 | ---------- | -------------- | ---------------------------------------------------- | -------- |
@@ -43,156 +36,92 @@ and produces something importable:
 | 2024-04-04 | DMart          | `POS 1234XXXX5678 DMART BANGALORE`                   | -3250.75 |
 | 2024-04-05 | John Doe       | `UPI/412345678903/JOHN DOE/johndoe@oksbi`            | 1500.00  |
 
-The original narration is always preserved, never discarded.
+The bank's original text is kept in Notes, so nothing is lost.
 
-## Install
+## Quick start
 
-Needs Node 22 or newer. Nothing to install: `npx` fetches it on first use.
+You need [Node.js](https://nodejs.org) 22 or newer. There is nothing else to
+install.
+
+**Step 1. Download a statement from your bank.** Use internet banking rather
+than the mobile app if you can: the website usually offers Excel or CSV, which
+work better than PDF.
+
+**Step 2. Convert it.**
 
 ```bash
 npx india2actual statement.csv
 ```
 
-Install it properly if you run it often:
+This writes `statement.actual.csv` next to your file. Works the same for
+`.xls`, `.xlsx` and `.pdf`.
+
+**Step 3. Import it into Actual.** Open the account, choose **Import**, pick
+`statement.actual.csv`, and match up the `Date`, `Payee`, `Notes` and `Amount`
+columns. Leave `Reference` unmapped. Actual remembers this per account, so you
+only do it once.
+
+That's it.
+
+If you use it often, install it so you can drop the `npx`:
 
 ```bash
 npm install -g india2actual
 ```
 
-## Usage
+## Skip the import step
+
+If you run an Actual sync server, the tool can send transactions straight into
+your budget. No CSV, no import dialog.
+
+Create a file named `.env` in the folder you run the tool from:
 
 ```bash
-india2actual statement.csv          # writes statement.actual.csv
-india2actual statement.pdf --stdout # preview without writing
+ACTUAL_SERVER_URL=https://actual.example.com
+ACTUAL_PASSWORD=your-actual-password
+ACTUAL_SYNC_ID=your-sync-id        # Actual: Settings > Advanced > Sync ID
 ```
 
-Then import the generated CSV through Actual's **Import transactions** dialog,
-mapping `Date`, `Payee`, `Notes` and `Amount`. Actual remembers that mapping per
-account, so you only do it once. Leave `Reference` unmapped.
-
-Or skip the CSV and [push straight into Actual](#pushing-straight-into-actual).
-
-### Supported input
-
-The format is detected by inspecting the file, not by its extension, because
-banks routinely name an HTML table `.xls`.
-
-| Actually is                         | Supported                     |
-| ----------------------------------- | ----------------------------- |
-| CSV / TSV (delimiter auto-detected) | yes                           |
-| Excel `.xlsx` (OOXML)               | yes                           |
-| HTML table named `.xls`             | yes                           |
-| Excel 2003 XML (SpreadsheetML)      | yes                           |
-| PDF, including password-protected   | yes                           |
-| Legacy binary `.xls` (OLE2)         | no, re-save as `.xlsx` or CSV |
-
-Columns are detected from the header row, using the synonyms Indian banks use
-for the same seven fields (date, narration, debit, credit, amount, balance,
-reference). Preamble and footer rows are skipped automatically.
-
-### Options
-
-| Option                       | Purpose                                                                         |
-| ---------------------------- | ------------------------------------------------------------------------------- |
-| `--out <path>`               | Where to write the CSV. Default `<input>.actual.csv`.                           |
-| `--stdout`                   | Write to stdout instead of a file.                                              |
-| `--date-order dmy\|mdy\|ymd` | Only affects all-numeric dates, where `01/02/2024` is ambiguous. Default `dmy`. |
-| `--delimiter <char>`         | Force the CSV delimiter instead of detecting it.                                |
-| `--merchants <path>`         | Your own merchant rules. See [below](#custom-merchant-rules).                   |
-| `--env-file <path>`          | Read settings from this file instead of `./.env`.                               |
-| `--push`                     | Send to Actual via its API instead of writing a CSV.                            |
-| `--account <name\|id>`       | Which Actual account to import into. Required with `--push`.                    |
-| `--dry-run`                  | With `--push`, report what would change without writing.                        |
-| `--force`                    | Write even if the balance check fails.                                          |
-| `--quiet`                    | Only report problems.                                                           |
-
-### Settings
-
-Passwords and server details come from a `.env` file in the current directory,
-never from command-line flags, which would end up in your shell history.
+Preview first, then do it for real:
 
 ```bash
-cp .env.example .env
-```
-
-Real environment variables take precedence over the file, so a one-off override
-works without editing it:
-
-```bash
-ACTUAL_SYNC_ID=other-budget india2actual statement.pdf --push --account Savings
-```
-
-| Setting                      | Purpose                                               |
-| ---------------------------- | ----------------------------------------------------- |
-| `STATEMENT_PASSWORD`         | Password on an encrypted statement PDF.               |
-| `ACTUAL_SERVER_URL`          | Your Actual sync server.                              |
-| `ACTUAL_PASSWORD`            | Password for that server. Not the statement password. |
-| `ACTUAL_SYNC_ID`             | Budget to import into: Settings > Advanced > Sync ID. |
-| `ACTUAL_ENCRYPTION_PASSWORD` | Only for end-to-end encrypted budgets.                |
-| `ACTUAL_DATA_DIR`            | Local budget cache. Default `./.actual-cache`.        |
-
-None of this is needed to convert a statement to CSV, unencrypted PDFs
-included.
-
-## Pushing straight into Actual
-
-```bash
-# Always preview first.
 india2actual statement.pdf --push --account "ICICI Savings" --dry-run
 # [dry run] ICICI Savings: would add 34, would update 0.
 
 india2actual statement.pdf --push --account "ICICI Savings"
 ```
 
-`--dry-run` maps onto Actual's own preview mode, so nothing is written.
+Pushing is also the better way to import:
 
-The API path does two things the CSV path cannot:
+- **No duplicates.** If two statements overlap, transactions already in Actual
+  are skipped.
+- **Actual learns faster.** It sees both the clean payee and the bank's original
+  text, which is what its payee matching learns from.
 
-- Sets `imported_payee` to the raw narration, which is what Actual's payee
-  matching learns from, while `payee_name` gets the cleaned merchant. The CSV
-  field mapping has no `imported_payee` slot.
-- Sets `imported_id` from the bank reference, making re-imports of overlapping
-  date ranges idempotent.
-
-### Review before you push
-
-The tool reads its own output, so you can check and correct the CSV before
-anything reaches your budget:
+Want to check the result before it reaches your budget? Convert, edit the CSV,
+then push the CSV:
 
 ```bash
 india2actual statement.pdf
-$EDITOR statement.actual.csv
+# open statement.actual.csv and fix anything you like
 india2actual statement.actual.csv --push --account "ICICI Savings"
 ```
 
-Payees you edited are kept verbatim; converted output is passed through, not
-re-parsed. The `Reference` column survives, so deduplication still works.
+## Password-protected PDFs
 
-One caveat: the CSV has no balance column, so a run over converted output
-cannot re-verify the amounts and will say so. The check that matters already ran
-when the CSV was produced.
+Add the PDF's password to your `.env` file:
 
-## The balance check
-
-Almost every Indian statement carries a running balance, which makes the parse
-self-verifying: each transaction must equal the change in balance it caused. The
-tool **refuses to write a statement that does not reconcile**:
-
-```
-Balance check FAILED (4/5 rows agree).
-  1 of 5 rows do not agree with the balance column.
-  2024-04-03 "ATW/1234/CASH WDL/BANGALORE": balance moved by -2000.00 but the parsed amount is -9000.00
-Refusing to write a statement that does not reconcile. Re-run with --force to write it anyway.
+```bash
+STATEMENT_PASSWORD=your-pdf-password
 ```
 
-This catches inverted debit and credit signs, dropped rows and misaligned
-columns. Both date orders are scored, so newest-first exports work too. It
-matters most for PDFs, where the table is reconstructed from the position of
-each piece of text and so is inherently less certain.
+Passwords go in `.env` rather than on the command line so they do not end up in
+your shell history.
 
-## Custom merchant rules
+## Fixing a payee name
 
-The built-in map covers common Indian merchants. Add your own in JSON:
+Common Indian merchants are recognised out of the box. For anything else, such
+as your local shop or your employer, write your own rules in a JSON file:
 
 ```json
 [
@@ -205,66 +134,118 @@ The built-in map covers common Indian merchants. Add your own in JSON:
 india2actual statement.csv --merchants my-merchants.json
 ```
 
-Patterns match a lowercased, punctuation-stripped form of the VPA local-part or
-merchant name, so write them without spaces or dots. Your rules take precedence
-over the built-ins.
+Write patterns in lowercase with no spaces or dots. They are matched against
+the UPI ID (the part before the `@`) or the merchant name. Your rules win over
+the built-in ones.
 
-**Naming recurring mandates.** A NACH narration contains no name, only the
-collecting bank and a mandate reference, followed by a sequence number that
-changes every month. Those collections are grouped under the stable mandate
-reference, for example `NACH ICIC0000000000000001`, so name each one once:
+Two cases where rules are especially useful:
 
-```json
-[{ "pattern": "icic0000000000000001", "name": "Home Loan EMI" }]
+- **EMIs and other auto-debits (NACH).** The bank's text has no name, only a
+  mandate number, so these show up as something like
+  `NACH ICIC0000000000000001`. Name each one once:
+
+  ```json
+  [{ "pattern": "icic0000000000000001", "name": "Home Loan EMI" }]
+  ```
+
+- **Names cut short.** Some banks trim names to about ten characters, so the
+  same person can appear as `Mr A N OTHE`, `A N OTHER` or `OTHER`. Add one rule
+  per variant to merge them.
+
+## It checks its own work
+
+Nearly every Indian statement has a running balance column. The tool uses it to
+verify every transaction: each amount must match the change in balance. If
+anything does not add up, it **refuses to write the file** and tells you which
+row is wrong:
+
+```
+Balance check FAILED (4/5 rows agree).
+  1 of 5 rows do not agree with the balance column.
+  2024-04-03 "ATW/1234/CASH WDL/BANGALORE": balance moved by -2000.00 but the parsed amount is -9000.00
+Refusing to write a statement that does not reconcile. Re-run with --force to write it anyway.
 ```
 
-**Truncated name fields.** Some banks cut each narration field to about ten
-characters, so one counterparty can arrive as `Mr A N OTHE`, `A N OTHER` or
-`OTHER` depending on the payment route. A rule per variant collapses them.
+## Reference
 
-## Duplicate handling
+### Supported files
 
-A 12-digit UPI reference (UTR or RRN) found in the narration is emitted in the
-`Reference` column, and becomes Actual's `imported_id` with `--push`.
+| File                              | Supported                     |
+| --------------------------------- | ----------------------------- |
+| CSV / TSV                         | yes                           |
+| Excel `.xlsx`                     | yes                           |
+| `.xls` that is really HTML or XML | yes                           |
+| PDF, including password-protected | yes                           |
+| Old binary `.xls`                 | no, re-save as `.xlsx` or CSV |
 
-References are deliberately conservative: only exactly-12-digit values are
-accepted, and any value occurring more than once in a file is discarded. Account
-and card numbers appear in narrations at other lengths and are not unique per
-transaction, and a repeated `imported_id` makes Actual treat distinct
-transactions as the same one and drop them. Where no reference is set, Actual's
-own date and amount matching takes over.
+### Options
 
-## Getting statements out of your bank
+| Option                       | Purpose                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `--out <path>`               | Where to write the CSV. Default `<input>.actual.csv`.                           |
+| `--stdout`                   | Print the result instead of writing a file.                                     |
+| `--date-order dmy\|mdy\|ymd` | Only affects all-numeric dates, where `01/02/2024` is ambiguous. Default `dmy`. |
+| `--delimiter <char>`         | Force the CSV delimiter instead of detecting it.                                |
+| `--merchants <path>`         | Your own payee rules. See [above](#fixing-a-payee-name).                        |
+| `--env-file <path>`          | Read settings from this file instead of `./.env`.                               |
+| `--push`                     | Send to Actual directly instead of writing a CSV.                               |
+| `--account <name\|id>`       | Which Actual account to import into. Required with `--push`.                    |
+| `--dry-run`                  | With `--push`, report what would change without writing.                        |
+| `--force`                    | Write even if the balance check fails.                                          |
+| `--quiet`                    | Only report problems.                                                           |
 
-Prefer internet banking over the mobile app. Bank apps often offer only PDF,
-while the web portal usually offers XLS or CSV for the same account. CSV is the
-most reliable input here and PDF the least, so use a spreadsheet if offered one.
+### Settings
+
+These go in a `.env` file in the folder you run the tool from. None are needed
+just to convert a statement to CSV.
+
+| Setting                      | Purpose                                               |
+| ---------------------------- | ----------------------------------------------------- |
+| `STATEMENT_PASSWORD`         | Password on an encrypted statement PDF.               |
+| `ACTUAL_SERVER_URL`          | Your Actual sync server.                              |
+| `ACTUAL_PASSWORD`            | Password for that server. Not the statement password. |
+| `ACTUAL_SYNC_ID`             | Budget to import into: Settings > Advanced > Sync ID. |
+| `ACTUAL_ENCRYPTION_PASSWORD` | Only for end-to-end encrypted budgets.                |
+| `ACTUAL_DATA_DIR`            | Local budget cache. Default `./.actual-cache`.        |
+
+Real environment variables override the file, which is handy for a one-off:
+
+```bash
+ACTUAL_SYNC_ID=other-budget india2actual statement.pdf --push --account Savings
+```
+
+### How duplicates are avoided
+
+Each UPI transaction carries a 12-digit reference number. The tool writes it to
+the `Reference` column, and with `--push` Actual uses it to recognise a
+transaction it already has.
+
+Only exactly-12-digit values that appear once in the file are used. Anything
+else could be an account or card number, and would make Actual wrongly merge
+separate transactions. Where there is no reference, Actual falls back to
+matching on date and amount.
+
+When you push a CSV you converted earlier, payees you edited are kept as they
+are and the references survive. The balance check cannot run again, because the
+converted CSV has no balance column, but it already ran when the CSV was made.
 
 ## Limitations
 
-- **PDF is the least reliable path.** Reconstructing a table from positioned
-  text can break when a bank changes its template. The balance check exists to
-  make that loud rather than silent.
-- **Line breaks inside a PDF are ambiguous.** A wrap and a deliberate break are
-  not always distinguishable, so a space can appear inside a long reference, or
-  be lost between two words. Dates, amounts, payees and the deduplication
-  reference do not depend on it.
-- **The merchant map is not authoritative.** Payment aggregators often mask the
-  real merchant. You get a consistent payee, which beats one per transaction,
-  but not always the actual shop.
-- **No automatic fetching, and there cannot be.** India's Account Aggregator
-  framework requires FIU registration and a commercial contract, so a free
-  always-on connector like Actual's European bank sync is not possible. This is
-  a converter you run on a statement you downloaded.
+- **PDF is the least reliable input.** The table has to be rebuilt from where
+  each piece of text sits on the page, which can break when a bank changes its
+  layout. The balance check is there to catch this. Use CSV or Excel when your
+  bank offers it.
+- **Long text in a PDF may gain or lose a space** where a line wrapped. Dates,
+  amounts, payees and references are not affected.
+- **Payee names are a best guess.** Payment gateways often hide the real shop.
+  You get one consistent payee instead of one per transaction, but not always
+  the actual shop.
+- **It cannot fetch statements for you.** India's Account Aggregator framework
+  needs a registered entity and a commercial contract, so a free always-on
+  connector like Actual's European bank sync is not possible. You download the
+  statement; this tool does the rest.
 
-## Contributing
-
-Adding a bank usually means adding column synonyms or narration token shapes,
-both small and contained. Narration strings are the most useful thing to
-contribute: the description column only, with names, account numbers and
-references replaced by realistic fakes.
-
-No real statement data belongs in this repository. Fixtures are synthetic.
+<!-- ## Contributing -->
 
 ## Development
 
