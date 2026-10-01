@@ -179,6 +179,18 @@ helper you are adding could also DRY up existing code, prefer keeping the new
 code self-contained over editing the shared function, unless that was the point
 of the change.
 
+## Changelog
+
+`CHANGELOG.md` records user-visible changes, newest first, in Keep a Changelog
+style. A `feat:` or `fix:` change adds one line under `## Unreleased` in the
+same change, grouped as Added, Changed or Fixed. Write it for a user of the CLI
+("Credit card statements are detected automatically"), not for the diff. Docs,
+tests and chores do not need an entry.
+
+At release time, the maintainer renames `Unreleased` to the version and date,
+adds a fresh empty `Unreleased` above it, and copies that section into the
+GitHub release notes.
+
 ## Working with the user
 
 **Never run `git commit`.** Not when asked to, not as the final step of
