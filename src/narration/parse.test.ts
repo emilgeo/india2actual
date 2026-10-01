@@ -146,7 +146,7 @@ describe('parseNarration fallback chain', () => {
   it('uses the VPA when no readable name can be built from it', () => {
     // A phone-number VPA with no name token: nothing readable can be derived,
     // but the VPA is still stable per counterparty. The raw narration is not,
-    // because it carries a per-transaction reference — using it would mint a
+    // because it carries a per-transaction reference, and using it would mint a
     // new payee for every transfer from the same person.
     const parsed = parseNarration('UPI/412345678901/9876543210@ybl');
 
@@ -155,7 +155,7 @@ describe('parseNarration fallback chain', () => {
   });
 
   it('falls back to the raw narration when there is nothing at all', () => {
-    // No name, no VPA, no recognised posting — only opaque digits.
+    // No name, no VPA, no recognised posting, only opaque digits.
     const raw = '0000/1234567890123456/99';
     expect(parseNarration(raw).merchant).toBe(raw);
   });
@@ -215,7 +215,7 @@ describe('parseNarration with ICICI field truncation', () => {
   });
 
   it('names a recurring mandate after the mandate, not the collection', () => {
-    // A NACH narration contains no name at all — only the collecting bank and
+    // A NACH narration contains no name at all, only the collecting bank and
     // the mandate reference, followed by a sequence number that changes every
     // month. Falling back to the raw text would therefore mint a new payee per
     // collection, so the stable mandate reference is used instead.

@@ -12,7 +12,7 @@ import type { StatementTransaction } from '../interpret/rows.js';
  * `imported_payee` slot (only date, amount, payee, notes, category, in/out and
  * inflow/outflow), so the raw narration goes into Notes to keep it visible.
  * The API path does not have this limitation and sets `imported_payee`
- * properly — this is the one place the CSV route is lossier.
+ * properly: this is the one place the CSV route is lossier.
  *
  * `Reference` is emitted for human inspection; leave it unmapped on import.
  *

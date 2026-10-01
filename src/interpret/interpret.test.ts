@@ -238,7 +238,7 @@ describe('interpretTable', () => {
   });
 
   it('drops references that repeat, which cannot be real bank references', () => {
-    // Both rows carry the same value in the reference column — a padded
+    // Both rows carry the same value in the reference column, a padded
     // placeholder, not a per-transaction id. Keeping it would make Actual
     // treat the second transaction as a duplicate of the first.
     const result = interpretTable(

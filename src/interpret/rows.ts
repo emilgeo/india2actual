@@ -18,7 +18,7 @@ export type StatementTransaction = {
   /** Original narration, for Actual's `imported_payee`. */
   raw: string;
   kind: NarrationKind;
-  /** Only set when safe to use as `imported_id` — see `dropRepeatedRefs`. */
+  /** Only set when safe to use as `imported_id`. See `dropRepeatedRefs`. */
   ref?: string;
   /** Running balance, when the statement has one. Used only for validation. */
   balance?: number;
@@ -115,7 +115,7 @@ function usableColumnRef(value: string): string | null {
  * Strip references that occur more than once in the file.
  *
  * A genuine bank reference is unique per transaction, so a repeat means we
- * picked up something else — an account number, a padded placeholder, a
+ * picked up something else: an account number, a padded placeholder, a
  * recurring mandate id. Leaving it in place would make Actual treat distinct
  * transactions as the same one and silently drop them, which is strictly worse
  * than having no reference at all (where Actual's date+amount fuzzy matching
@@ -149,7 +149,7 @@ export type Interpreted = InterpretResult & {
  * Turn an extracted table into transactions.
  *
  * Rows that lack a parseable date or amount are skipped rather than guessed
- * at — that is what removes statement preambles, page headers repeated
+ * at. That is what removes statement preambles, page headers repeated
  * mid-file, and footer totals without needing to know how many there are.
  */
 export function interpretTable(

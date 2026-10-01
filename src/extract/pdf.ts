@@ -44,7 +44,7 @@ const SHORT_LINE_MARGIN = 8;
  * How far below its row a wrapped line may sit and still belong to it.
  *
  * Page footers live well below the last transaction on a page, and without a
- * limit they are folded into it — which is how ICICI's `www.icici.bank.in`
+ * limit they are folded into it, which is how ICICI's `www.icici.bank.in`
  * and its toll-free number ended up inside a narration and an amount.
  */
 const MAX_CONTINUATION_BELOW = 40;
@@ -125,7 +125,7 @@ function isAnchorLine(line: Line): boolean {
  * Statements bracket the table with totals and carried-forward balances:
  * Federal prints `GRAND TOTAL` with per-column sums, and an
  * `Opening Balance` row above the first transaction. Neither has a date, so
- * both would otherwise be folded into the nearest transaction — the grand
+ * both would otherwise be folded into the nearest transaction: the grand
  * total's column sums landing in an amount field, which the balance check
  * then rejects.
  */
@@ -171,7 +171,7 @@ function firstHeaderIndex(lines: Line[]): number {
  * below it.
  *
  * Anchors are restricted to lines *after* the header because statement
- * preambles contain dates of their own — Federal prints `Address Last Updated
+ * preambles contain dates of their own: Federal prints `Address Last Updated
  * On : 13/08/2024` and `Account Open Date : 25/03/2013` above the table, and
  * without this each becomes a phantom transaction.
  */
@@ -203,7 +203,7 @@ function tableLines(lines: Line[]): Line[] {
  *   nearly that wide, collapsing `Withdrawals` and `Deposits` into one cell.
  *
  * Only header and dated rows take part. Wrapped narration lines and page
- * furniture would otherwise bridge gutters — ICICI's footer URL spans the gap
+ * furniture would otherwise bridge gutters: ICICI's footer URL spans the gap
  * between the serial-number and date columns.
  */
 export function inferBands(lines: Line[]): Band[] {
@@ -267,7 +267,7 @@ export function inferBands(lines: Line[]): Band[] {
  *
  * Normally the band it overlaps most. When it overlaps none, it goes to the
  * first band starting at or after it, because a cell's text begins at the
- * cell's left edge, which sits left of the header label naming it — ICICI's
+ * cell's left edge, which sits left of the header label naming it: ICICI's
  * description cell starts at x=192 while its `Transaction Remarks` header
  * starts at x=247. Choosing the merely *nearest* band would instead drop a
  * short wrapped line such as `9f03689dd` (x=192..237) into the preceding
@@ -452,8 +452,8 @@ export function assembleRows(lines: Line[], bands: Band[]): string[][] {
       ) {
         owner.set(index, previousAnchor);
       }
-      // Otherwise it belongs to no transaction on this page — a preamble,
-      // page header or footer — and is dropped.
+      // Otherwise it belongs to no transaction on this page (a preamble,
+      // page header or footer) and is dropped.
     }
   }
 
@@ -495,7 +495,7 @@ export function assembleRows(lines: Line[], bands: Band[]): string[][] {
 
     // Split by position relative to the anchor. ICICI prints a descriptor
     // above each row (`Debit trxn`, `NACH trxn`) that is *not* part of the
-    // bank's narration — the source spreadsheet contains no occurrence of
+    // bank's narration: the source spreadsheet contains no occurrence of
     // "trxn" at all. Where such a line does carry real text, that text also
     // appears in the wrapped narration below. So below-anchor content wins,
     // and the line above is used only when there is nothing below it.

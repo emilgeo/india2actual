@@ -1,7 +1,7 @@
 /**
  * The transaction families Indian banks encode into the narration/particulars
  * column. `other` covers interest postings, charges, cheques and anything else
- * we do not recognise — it is not an error.
+ * we do not recognise, and it is not an error.
  */
 export type NarrationKind =
   | 'upi'

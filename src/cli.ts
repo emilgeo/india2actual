@@ -18,7 +18,7 @@ import { pushTransactions } from './out/push.js';
 import type { PushConfig } from './out/push.js';
 
 const USAGE = `
-india2actual — convert Indian bank statements for Actual Budget
+india2actual: convert Indian bank statements for Actual Budget
 
 Usage:
   india2actual <statement-file> [options]
@@ -262,7 +262,7 @@ async function run(args: string[]): Promise<number> {
   }
 
   if (!transactions.length) {
-    stderr.write('No transactions were parsed — nothing to write.\n');
+    stderr.write('No transactions were parsed, nothing to write.\n');
     return 1;
   }
 

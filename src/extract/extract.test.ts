@@ -108,7 +108,7 @@ describe('xlsx extraction', () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Statement');
     sheet.addRow(HEADER);
-    // A real Date, as Excel would store it — 4 March, not 3 April.
+    // A real Date, as Excel would store it: 4 March, not 3 April.
     sheet.addRow([
       new Date(Date.UTC(2024, 2, 4)),
       'UPI/DR/412345678901/SWIGGY/YESB/swiggy@ybl/Payment',

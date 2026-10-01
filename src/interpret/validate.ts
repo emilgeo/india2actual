@@ -12,7 +12,7 @@ export type Validation = {
   issues: string[];
 };
 
-/** Half a paisa — comfortably inside any rounding a bank applies. */
+/** Half a paisa, comfortably inside any rounding a bank applies. */
 const EPSILON = 0.005;
 
 /**
@@ -22,7 +22,7 @@ const EPSILON = 0.005;
  * the parse self-checkable: each transaction must equal the change in balance
  * it caused. This is the difference between "the numbers look plausible" and
  * "the numbers are provably right", and it catches precisely the failure modes
- * of geometric PDF extraction — inverted debit/credit signs, dropped rows, and
+ * of geometric PDF extraction: inverted debit/credit signs, dropped rows, and
  * columns read one position across.
  *
  * Statements come in both date orders, so both interpretations are scored and
@@ -44,8 +44,8 @@ export function validateBalances(
       matched: 0,
       issues: [
         withBalance.length === 0
-          ? 'No balance column found — amounts could not be cross-checked.'
-          : 'Only one row carried a balance — not enough to cross-check.',
+          ? 'No balance column found, amounts could not be cross-checked.'
+          : 'Only one row carried a balance, not enough to cross-check.',
       ],
     };
   }

@@ -17,7 +17,7 @@ import type { Table } from './types.js';
  *
  * `Index` is the load-bearing detail: it is a 1-based absolute column, emitted
  * when a run of cells is empty. Ignoring it silently shifts every following
- * value left, which reads amounts out of the wrong column — the kind of bug
+ * value left, which reads amounts out of the wrong column, the kind of bug
  * that produces plausible numbers rather than an error.
  */
 const parser = new XMLParser({

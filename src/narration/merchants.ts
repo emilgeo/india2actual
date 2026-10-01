@@ -2,7 +2,7 @@
  * Merchant identity map.
  *
  * Indian merchants appear under many spellings across banks and payment
- * routes — `swiggy@ybl`, `swiggystores@ybl`, `SWIGGY BANGALORE`, `Swiggy Ltd`.
+ * routes: `swiggy@ybl`, `swiggystores@ybl`, `SWIGGY BANGALORE`, `Swiggy Ltd`.
  * Matching a pattern to one canonical name is what collapses them into a
  * single payee in Actual.
  *
@@ -87,7 +87,7 @@ export const MERCHANT_RULES: MerchantRule[] = [
   { pattern: /^(practo|cult|curefit)/, name: 'Cult.fit' },
 
   // Payment intermediaries.
-  // These are aggregators, not the real merchant — but a consistent payee is
+  // These are aggregators, not the real merchant, but a consistent payee is
   // still far better than one per transaction, and a rule in Actual can split
   // them further if wanted.
   { pattern: /^(paytm|one97)/, name: 'Paytm' },
@@ -118,7 +118,7 @@ export const MERCHANT_RULES: MerchantRule[] = [
  * Bank postings that are not payments to anyone: interest, tax, card autopay.
  *
  * These are matched against the *whole* narration rather than an extracted
- * name token, because there is no name in them to extract — ICICI writes
+ * name token, because there is no name in them to extract: ICICI writes
  * interest as `000123456789:Int.Pd:30-09-2025 to 30-12-2025`. Without this the
  * payee would be the entire narration, which differs every quarter and so
  * creates a new payee each time.

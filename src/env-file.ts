@@ -18,8 +18,8 @@ export type EnvFileResult =
 
 /**
  * A missing file is not an error: the CSV path needs no configuration, so most
- * runs legitimately have no `.env` at all. Anything else — unreadable, a
- * directory, malformed contents — is reported, because it means the user
+ * runs legitimately have no `.env` at all. Anything else (unreadable, a
+ * directory, malformed contents) is reported, because it means the user
  * believes they have configured something that is in fact being ignored. That
  * would otherwise surface much later as a confusing "ACTUAL_SERVER_URL is not
  * set".

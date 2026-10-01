@@ -2,7 +2,7 @@ import type { StatementTransaction } from '../interpret/rows.js';
 
 /**
  * The subset of Actual's `ImportTransactionEntity` we populate. Declared
- * locally so this module type-checks without `@actual-app/api` installed —
+ * locally so this module type-checks without `@actual-app/api` installed,
  * it is an optional peer dependency, since the CSV path is the default and
  * the API package pulls in a native SQLite build.
  */

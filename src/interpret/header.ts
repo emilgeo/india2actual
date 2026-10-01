@@ -8,7 +8,7 @@ export type HeaderMatch = {
   /** Row index of the header within the table. */
   index: number;
   map: ColumnMap;
-  /** Number of roles identified — used to choose between candidate rows. */
+  /** Number of roles identified, used to choose between candidate rows. */
   score: number;
 };
 

@@ -17,7 +17,7 @@ const ENTITIES: Record<string, string> = {
 
 /**
  * Bank exports lean on `&nbsp;` for empty cells and `&amp;` in merchant names,
- * and an undecoded `&nbsp;` is not whitespace — it would survive a `.trim()`
+ * and an undecoded `&nbsp;` is not whitespace, so it would survive a `.trim()`
  * and make an empty cell look populated.
  */
 function decodeEntities(value: string): string {

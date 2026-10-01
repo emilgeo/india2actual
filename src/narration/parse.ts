@@ -13,7 +13,7 @@ import type { NarrationKind, ParsedNarration } from './types.js';
  */
 const VPA_TOKEN = /^[a-z0-9][a-z0-9._-]*@[a-z][a-z0-9]+$/i;
 
-/** UPI UTR / RRN. Exactly 12 digits — see `extractRef` for why not 9-16. */
+/** UPI UTR / RRN. Exactly 12 digits. See `extractRef` for why not 9-16. */
 const UTR_TOKEN = /^\d{12}$/;
 
 /** IFSC, e.g. `HDFC0001234`. Routing detail, never a payee. */
@@ -178,7 +178,7 @@ const BANK_CODES = new Set([
  * a fixed width and spell bank names out in full.
  *
  * ICICI cuts every narration field to about ten characters, so `Payment from`
- * arrives as `Payment fr` and `Pay request` as `Pay reques` — prefixes, not
+ * arrives as `Payment fr` and `Pay request` as `Pay reques`: prefixes, not
  * whole words. It also names the counterparty's bank in words (`State Bank`,
  * `FEDERAL BA`, `IDFC FIRST`, `HDFC BANK LTD`), and those would otherwise
  * compete with the actual payee for the longest-name-wins rule.
@@ -293,7 +293,7 @@ function subTokens(tokens: string[]): string[] {
 
 function detectKind(tokens: string[]): NarrationKind {
   // Scan the words of the first two tokens: banks prefix the route with a
-  // channel marker, sometimes in the same field — `MMT/IMPS/...` but also
+  // channel marker, sometimes in the same field: `MMT/IMPS/...` but also
   // Federal's `FT IMPS/IFI/...`, where the marker is the second word.
   for (const token of subTokens(tokens.slice(0, 2))) {
     for (const [marker, kind] of KIND_MARKERS) {
@@ -335,7 +335,7 @@ function nameFromAccountReference(tokens: string[]): string | null {
  * looser 9-16 range, because account numbers and card numbers also appear in
  * narrations at those lengths and are *not* unique per transaction. A repeated
  * `imported_id` would make Actual treat distinct transactions as the same one
- * and silently drop them — far worse than having no id, where Actual's
+ * and silently drop them, far worse than having no id, where Actual's
  * date+amount fuzzy matching takes over.
  */
 function extractRef(tokens: string[]): string | undefined {
@@ -632,7 +632,7 @@ export type ParseNarrationOptions = {
  * Parse an Indian bank narration into a usable payee plus the structured
  * fields hiding inside it.
  *
- * `merchant` is never empty — the fallback chain ends at the raw narration, so
+ * `merchant` is never empty: the fallback chain ends at the raw narration, so
  * the worst outcome equals what Actual shows today.
  */
 export function parseNarration(
@@ -678,7 +678,7 @@ function resolveMerchant({
   tokens: string[];
 }): string | null {
   // A mapped merchant is the strongest signal, and the VPA is the most stable
-  // thing to map on — it survives spelling changes in the name field.
+  // thing to map on, since it survives spelling changes in the name field.
   if (vpa) {
     const mapped = lookupMerchant(vpa.split('@')[0] ?? '', rules);
     if (mapped) {
@@ -693,7 +693,7 @@ function resolveMerchant({
     }
   }
 
-  // Bank postings that are not payments to anyone — interest, tax, charges.
+  // Bank postings that are not payments to anyone: interest, tax, charges.
   // Checked ahead of the weaker name heuristics below, because a charge like
   // `MABChgs-Mar2026` does contain a word-ish token (`MABChgs`) that would
   // otherwise be title-cased into a payee.
@@ -703,7 +703,7 @@ function resolveMerchant({
   }
 
   // A cash withdrawal has no payee. Without this the leftover token is
-  // usually the ATM's location, which makes every withdrawal a new payee —
+  // usually the ATM's location, which makes every withdrawal a new payee,
   // exactly the problem this tool exists to fix.
   if (kind === 'atm') {
     return 'ATM Withdrawal';
@@ -729,7 +729,7 @@ function resolveMerchant({
     if (fromVpa) {
       return fromVpa;
     }
-    // Nothing readable in it — a phone number or an account number as the
+    // Nothing readable in it: a phone number or an account number as the
     // local part. The VPA itself is still the right answer: it is stable per
     // counterparty, whereas the raw narration carries a per-transaction
     // reference and so would mint a new payee every time.
@@ -751,7 +751,7 @@ function resolveMerchant({
 
   // A recurring mandate has no name in its narration, only the collecting
   // bank and the mandate reference. Naming it after the mandate keeps every
-  // collection under one payee — otherwise the sequence number printed beside
+  // collection under one payee, otherwise the sequence number printed beside
   // it makes each month a brand new payee, which is the exact problem this
   // tool exists to solve. Give it a meaningful name with a merchant rule.
   if (kind === 'ach') {

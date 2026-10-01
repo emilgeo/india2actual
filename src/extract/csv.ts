@@ -33,7 +33,7 @@ export function sniffDelimiter(contents: string): string {
     }
 
     // Reward the delimiter that appears the same number of times on the most
-    // lines — that is the signature of a real column structure.
+    // lines, the signature of a real column structure.
     const tally = new Map<number, number>();
     for (const count of counts) {
       tally.set(count, (tally.get(count) ?? 0) + 1);

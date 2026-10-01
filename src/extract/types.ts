@@ -3,7 +3,7 @@ export type SourceFormat = 'csv' | 'xlsx' | 'pdf';
 /**
  * The single boundary between extraction and interpretation.
  *
- * Every extractor — CSV, XLS/XLSX, PDF — produces this and nothing else, and
+ * Every extractor (CSV, XLS/XLSX, PDF) produces this and nothing else, and
  * the interpreter never sees anything else. That is what keeps a bank's column
  * logic written once even when the same bank ships two formats.
  *

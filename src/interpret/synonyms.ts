@@ -27,7 +27,7 @@ export type ColumnRole =
   | 'ref';
 
 /**
- * Order is significant — the first pattern to match a header cell wins.
+ * Order is significant: the first pattern to match a header cell wins.
  *
  * `valueDate` precedes `date` because `Value Date` also ends in "date", and
  * `drcr` precedes `debit`/`credit` because a `DR/CR` indicator column would

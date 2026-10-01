@@ -163,7 +163,7 @@ describe('assembleRows', () => {
 
   it('keeps the page footer out of the last transaction', () => {
     // The footer's toll-free number sits in the withdrawal column. Folded in,
-    // it would concatenate onto an amount and produce a wildly wrong figure —
+    // it would concatenate onto an amount and produce a wildly wrong figure,
     // which the balance check would then reject.
     const last = rows()[2] ?? [];
     expect(last.join(' ')).not.toContain('18001080');
@@ -209,7 +209,7 @@ function federalLines(): Line[] {
   const at = (y: number, cells: Array<[number, string]>) => line(y, cells, 1, 4);
 
   return [
-    // Preamble — note the dates, which must not become transactions.
+    // Preamble. Note the dates, which must not become transactions.
     at(690, [
       [18, 'Address Last Updated On'],
       [161, ': 13/08/2024'],
@@ -276,7 +276,7 @@ function federalLines(): Line[] {
     at(392, [[129, 'OTHER/IMPSTXN']]),
 
     // Summary row with per-column sums, sitting just below the last
-    // transaction as it does in a real statement — close enough that the
+    // transaction as it does in a real statement, close enough that the
     // continuation-distance guard does not exclude it, so only recognising it
     // as a summary keeps its totals out of a transaction's amount fields.
     at(385, [

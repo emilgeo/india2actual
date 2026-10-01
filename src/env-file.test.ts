@@ -74,7 +74,7 @@ describe('loadEnvironmentFile', () => {
 
   it('treats a key present but blank as absent', () => {
     // The case a copied .env.example actually produces. `ACTUAL_DATA_DIR=`
-    // leaves an empty string, which is not nullish — so a `??` default would
+    // leaves an empty string, which is not nullish, so a `??` default would
     // not fire and the Actual API would receive '' as its data directory.
     const path = writeEnv('IIT_FROM_FILE=\n');
 
