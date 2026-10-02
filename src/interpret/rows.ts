@@ -50,6 +50,9 @@ export type InterpretOptions = {
   card?: boolean;
 };
 
+const CARD_CREDIT_FLAG = /^\s*\+|\d\s*c\s*$/i;
+const CARD_DEBIT_FLAG = /\d\s*d\s*$/i;
+
 const CARD_STATEMENT = /credit\s*card|card\s*(account\s*)?(no\b|number)/i;
 
 function detectCard(table: Table, headerIndex: number): boolean {
@@ -114,9 +117,18 @@ function resolveAmount(
   }
 
   // A card statement lists spending as plain positive figures and marks only
-  // credits (`CR`) or prints them negative, the reverse of a bank statement.
-  if (card && !/\b(cr|dr)\b/i.test(amountText)) {
-    return -amount;
+  // credits (`CR`, a trailing `C`, a leading `+`) or prints them negative, the
+  // reverse of a bank statement. A leading `C` is a rupee sign, not a credit.
+  if (card) {
+    if (CARD_CREDIT_FLAG.test(amountText)) {
+      return Math.abs(amount);
+    }
+    if (CARD_DEBIT_FLAG.test(amountText)) {
+      return -Math.abs(amount);
+    }
+    if (!/\b(cr|dr)\b/i.test(amountText)) {
+      return -amount;
+    }
   }
 
   return amount;

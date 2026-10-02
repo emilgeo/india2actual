@@ -6,6 +6,15 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Added
+
+- Credit card statements that mark credits with a trailing `C` or `D` flag or a
+  leading `+` are read with the right sign. A leading `C` is treated as a rupee
+  sign.
+- The card totals check also counts finance charges and fees printed apart from
+  purchases.
+- A combined `Date & Time` column is recognised as the date.
+
 ### Fixed
 
 - Excel workbooks with a notes sheet longer than the statement are read from

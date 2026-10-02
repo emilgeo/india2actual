@@ -6,6 +6,7 @@ import { findHeader } from './header.js';
 import { interpretTable } from './rows.js';
 import type { StatementTransaction } from './rows.js';
 import { validateBalances, validateCardTotals } from './validate.js';
+import { roleForHeader } from './synonyms.js';
 import { parseAmount, parseStatementDate } from './values.js';
 
 function table(rows: string[][]): Table {
@@ -457,5 +458,56 @@ describe('validateCardTotals', () => {
     const result = validateCardTotals(transactionsOf([[-430, 0]]));
 
     expect(result.status).toBe('skipped');
+  });
+});
+
+describe('credit card markers used by other issuers', () => {
+  const amounts = (values: string[]) =>
+    interpretTable({
+      rows: [
+        ['Date', 'Transaction Details', 'Amount'],
+        ...values.map(value => ['07/05/2025', 'ACME STORE PUNE IN', value]),
+      ],
+      preamble: ['Credit Card Statement'],
+      source: { path: 'card.pdf', format: 'pdf' },
+    })?.transactions.map(t => t.amount);
+
+  it('reads a trailing C or D flag as credit or debit', () => {
+    expect(amounts(['1,250.00 D', '310.00 C'])).toEqual([-1250, 310]);
+  });
+
+  it('reads a leading plus as a credit', () => {
+    expect(amounts(['+ 310.00', '1,250.00'])).toEqual([310, -1250]);
+  });
+
+  it('treats a leading C as a rupee sign, not a credit', () => {
+    expect(amounts(['C 1,250.00', '+ C 310.00'])).toEqual([-1250, 310]);
+  });
+
+  it('reads DR and CR markers', () => {
+    expect(amounts(['1,250.00 DR', '310.00 CR'])).toEqual([-1250, 310]);
+  });
+
+  it('counts finance charges and fees as spending in the totals check', () => {
+    const result = validateCardTotals(
+      transactionsOf([
+        [-400, 0],
+        [-35.5, 0],
+        [-18, 0],
+        [200, 0],
+      ]),
+      [
+        { label: 'Purchases / Debits', value: '400.00' },
+        { label: 'Finance Charges', value: '35.50' },
+        { label: 'Fees / Taxes / Interest', value: '18.00' },
+        { label: 'Payments / Credits', value: '200.00' },
+      ],
+    );
+
+    expect(result.status).toBe('passed');
+  });
+
+  it('recognises a combined date and time header', () => {
+    expect(roleForHeader('Date & Time')).toBe('date');
   });
 });

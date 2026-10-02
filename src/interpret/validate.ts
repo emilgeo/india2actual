@@ -124,7 +124,13 @@ function truncate(value: string, limit = 60): string {
   return value.length <= limit ? value : `${value.slice(0, limit - 1)}…`;
 }
 
-const SPENT_LABELS = [/^purchases?/i, /^cash\s*advances?/i];
+const SPENT_LABELS = [
+  /^purchases?/i,
+  /^cash\s*advances?/i,
+  // Printed apart from purchases by some issuers, but listed as rows.
+  /^finance\s*charges?/i,
+  /^fees?/i,
+];
 const PAID_LABELS = [/^payments?/i];
 
 function figureTotal(figures: Figure[], labels: RegExp[]): number | null {

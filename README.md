@@ -190,7 +190,10 @@ Statements that do not print totals, such as a yearly summary, cannot be
 checked, and the tool says so. If a card statement is not recognised and the
 signs come out reversed, add `--card`.
 
-So far this has been tested on ICICI card statements only.
+So far this has been tested on ICICI card statements only. Other issuers'
+conventions (a trailing `C` or `D`, a leading `+` on credits, `DR` and `CR`
+markers, and summary lines for finance charges and fees) are handled from public
+documentation of those layouts and are unverified.
 
 ## Reference
 
@@ -215,7 +218,7 @@ So far this has been tested on ICICI card statements only.
 | CSB Bank                                                          | Savings     | CSV                                         | Tested     |
 | HDFC                                                              | Savings     | CSV, Excel                                  | Unverified |
 | SBI, Axis, Kotak, PNB, Bank of Baroda, Canara, IndusInd, Yes Bank | Savings     | CSV, Excel, PDF                             | Unverified |
-| HDFC, SBI, Axis, Kotak                                            | Credit card | PDF                                         | Unverified |
+| HDFC, SBI, Axis, Kotak, IndusInd                                  | Credit card | PDF                                          | Unverified |
 
 **Tested** means a real statement was run and the output checked. **Unverified**
 means the bank's usual layout is expected to work, but nobody has confirmed it
