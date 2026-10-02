@@ -126,6 +126,27 @@ describe('xlsx extraction', () => {
 
     expect(result?.transactions[0]?.date).toBe('2024-03-04');
   });
+
+  it('picks the sheet holding the transactions over a longer notes sheet', async () => {
+    const workbook = new ExcelJS.Workbook();
+    const statement = workbook.addWorksheet('Account Statement');
+    statement.addRow(HEADER);
+    for (const row of DATA_ROWS) {
+      statement.addRow(row);
+    }
+    const notes = workbook.addWorksheet('Important Message');
+    for (let line = 0; line < DATA_ROWS.length + 5; line += 1) {
+      notes.addRow([`Note ${line}`]);
+    }
+
+    const path = join(workDir, 'notes-sheet.xlsx');
+    await workbook.xlsx.writeFile(path);
+
+    const { table } = await extractTable(path);
+
+    expect(table.source.part).toBe('Account Statement');
+    expect(interpretTable(table)?.transactions).toHaveLength(2);
+  });
 });
 
 describe('HTML-table extraction', () => {

@@ -6,6 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- Excel workbooks with a notes sheet longer than the statement are read from
+  the sheet that holds the transactions.
+
 ## 0.2.0 - 2026-10-01
 
 ### Added

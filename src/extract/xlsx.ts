@@ -1,5 +1,7 @@
 import ExcelJS from 'exceljs';
 
+import { findHeader } from '../interpret/header.js';
+
 import type { Table } from './types.js';
 
 /**
@@ -43,9 +45,10 @@ export async function extractXlsx(path: string): Promise<Table> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(path);
 
-  // Statement workbooks occasionally carry a cover or summary sheet, so the
-  // densest sheet is a better bet than the first one.
-  let best: { rows: string[][]; name: string } | null = null;
+  // Statement workbooks carry cover, notes or summary sheets. A sheet with a
+  // transaction header wins outright, because a notes sheet can be longer than
+  // a short statement; row count only breaks ties.
+  let best: { rows: string[][]; name: string; hasTable: boolean } | null = null;
 
   for (const worksheet of workbook.worksheets) {
     const rows: string[][] = [];
@@ -60,8 +63,13 @@ export async function extractXlsx(path: string): Promise<Table> {
       rows.push(cells);
     });
 
-    if (!best || rows.length > best.rows.length) {
-      best = { rows, name: worksheet.name };
+    const hasTable = findHeader(rows) !== null;
+    if (
+      !best ||
+      (hasTable && !best.hasTable) ||
+      (hasTable === best.hasTable && rows.length > best.rows.length)
+    ) {
+      best = { rows, name: worksheet.name, hasTable };
     }
   }
 
