@@ -10,6 +10,7 @@ All notable changes to this project are recorded here. The format follows
 
 - Excel workbooks with a notes sheet longer than the statement are read from
   the sheet that holds the transactions.
+- Add supported and tested banks to README
 
 ## 0.2.0 - 2026-10-01
 

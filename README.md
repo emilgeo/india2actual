@@ -204,6 +204,26 @@ So far this has been tested on ICICI card statements only.
 | PDF, including password-protected | yes                           |
 | Old binary `.xls`                 | no, re-save as `.xlsx` or CSV |
 
+### Supported banks
+
+| Bank                                                              | Account     | Formats                                     | Status     |
+| ----------------------------------------------------------------- | ----------- | ------------------------------------------- | ---------- |
+| ICICI                                                             | Savings     | PDF                                         | Tested     |
+| ICICI                                                             | Credit card | PDF (annual and monthly Amazon Pay layouts) | Tested     |
+| Federal Bank                                                      | Savings     | PDF                                         | Tested     |
+| IDFC FIRST Bank                                                   | Savings     | Excel                                       | Tested     |
+| CSB Bank                                                          | Savings     | CSV                                         | Tested     |
+| HDFC                                                              | Savings     | CSV, Excel                                  | Unverified |
+| SBI, Axis, Kotak, PNB, Bank of Baroda, Canara, IndusInd, Yes Bank | Savings     | CSV, Excel, PDF                             | Unverified |
+| HDFC, SBI, Axis, Kotak                                            | Credit card | PDF                                         | Unverified |
+
+**Tested** means a real statement was run and the output checked. **Unverified**
+means the bank's usual layout is expected to work, but nobody has confirmed it
+on a real file. If you try one, a report of what worked or failed is very
+welcome. The most useful report is the header row and a few narrations with
+names, numbers and references replaced by fakes. Please never share a real
+statement.
+
 ### Options
 
 | Option                       | Purpose                                                                         |
