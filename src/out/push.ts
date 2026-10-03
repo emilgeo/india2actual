@@ -7,10 +7,10 @@ import {
 } from '../narration/merchants.js';
 
 /**
- * The subset of Actual's `ImportTransactionEntity` we populate. Declared
- * locally so this module type-checks without `@actual-app/api` installed,
- * it is an optional peer dependency, since the CSV path is the default and
- * the API package pulls in a native SQLite build.
+ * The subset of Actual's `ImportTransactionEntity` populated here. Declared
+ * locally so this module type-checks without `@actual-app/api` installed.
+ * That package is an optional dependency, since the CSV path is the default and
+ * it pulls in a native SQLite module (`better-sqlite3`, shipped prebuilt).
  */
 export type ActualImportTransaction = {
   date: string;
@@ -182,10 +182,10 @@ export function findExistingCounterparts(
 type ActualAccount = { id: string; name: string; closed?: boolean };
 
 /**
- * The slice of `@actual-app/api` we use, described structurally.
+ * The slice of `@actual-app/api` in use, described structurally.
  *
  * Declared here rather than imported so this file type-checks whether or not
- * the optional peer dependency is installed.
+ * the optional dependency is installed.
  */
 type ActualApi = {
   init(config: {
