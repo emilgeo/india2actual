@@ -193,13 +193,53 @@ GitHub release notes.
 
 ## Working with the user
 
-**Never run `git commit`.** Not when asked to, not as the final step of
-anything. Stop at staging: `git add` the relevant files, show what is staged,
-and suggest a commit message for the user to use or ignore. The same applies to
-anything that publishes or rewrites history, including `git push`, `git merge`,
-`git rebase`, `git reset --hard`, `git stash drop`, creating tags, and opening
-or merging pull requests. Never add `Co-Authored-By: Claude` or any other
-AI attribution to a commit message or PR body.
+**Commits are allowed, but only after staging one logical change.** Run
+`git add` for exactly the files and hunks of that change, check `git diff
+--cached`, then `git commit`. Anything that publishes or rewrites history stays
+with the user and is never run: `git push`, `git merge`, `git rebase`,
+`git reset --hard`, `git stash drop`, creating tags, and opening or merging pull
+requests. Never add `Co-Authored-By: Claude` or any other AI attribution to a
+commit message or PR body.
+
+**Commit messages** are a type, a colon, and a short phrase about the change:
+
+```
+fix: create the data directory before a first push
+feat: link card payments as transfers with --transfer-to
+```
+
+The type is one of:
+
+| Type     | Use for                                                               |
+| -------- | --------------------------------------------------------------------- |
+| `feat:`  | A new capability a user can see or use                                |
+| `fix:`   | A bug fix                                                             |
+| `docs:`  | Documentation only: README, CHANGELOG, code comments                  |
+| `chore:` | Maintenance, no user-visible change: dependencies, tooling, CLAUDE.md |
+
+Write the phrase in lower case, in the imperative ("add", "fix", "read"),
+without a trailing full stop, and short enough to read in one line of
+`git log --oneline` (about 72 characters or fewer). Describe what the change
+does, not how it was reached. Add a body only when the reason is not obvious
+from the phrase, and keep it to a short paragraph. No em dashes.
+
+**One logical change per commit, never mixed.** What is staged at any moment
+must be exactly one change that one commit message describes. A feature, a bug
+fix found along the way, a docs update and a CLAUDE.md edit are four separate
+commits, even when they were written in the same session or touch the same
+file. When the working tree holds several changes, stage and commit them one at
+a time, each on its own with its own message and its own changelog
+line. Do not stage everything into one commit.
+
+To split a file that holds two changes, build the index entry from `HEAD` plus
+only the lines for the change being staged (`git hash-object -w` then
+`git update-index --cacheinfo`, or `git apply --cached` with a patch), because
+`git add -p` is interactive and unavailable. Before committing, read
+`git diff --cached` and confirm every hunk belongs to that one change. When
+possible, check the staged state on its own, for example by exporting it with
+`git checkout-index` into a temporary folder and running the typecheck and
+tests there, since the full working tree may pass only because of the other,
+unstaged changes. Leave everything not being committed unstaged.
 
 **Never get ahead of instructions.** Do what was asked and stop there. A
 question ("how can I...", "any suggestions?") is a request for an answer, not
