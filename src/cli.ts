@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { basename, dirname, extname, join } from 'node:path';
-import { argv, cwd, env, exit, stderr, stdout } from 'node:process';
+import { argv, cwd, env, exit, stderr, stdout, versions } from 'node:process';
 
 import { loadEnvironmentFile, setting } from './env-file.js';
 import { describeFormat, extractTable } from './extract/index.js';
@@ -17,7 +17,7 @@ import type { DateOrder } from './interpret/values.js';
 import { loadMerchantRules } from './merchants-file.js';
 import type { MerchantRule } from './narration/merchants.js';
 import { toCsv, writeCsv } from './out/csv.js';
-import { pushTransactions } from './out/push.js';
+import { nodeTooOldForPush, pushTransactions } from './out/push.js';
 import type { PushConfig } from './out/push.js';
 
 const USAGE = `
@@ -390,6 +390,14 @@ async function run(args: string[]): Promise<number> {
  * they do not end up in shell history or process listings.
  */
 function pushConfigFromEnv(options: Options): PushConfig {
+  if (nodeTooOldForPush(versions.node)) {
+    throw new Error(
+      `--push needs Node 22.14 or newer, but this is Node ${versions.node}. ` +
+        'Older versions crash when the Actual API loads. Upgrade Node, or ' +
+        'convert to CSV and import that instead.',
+    );
+  }
+
   if (!options.account) {
     throw new Error('--push also needs --account <name|id>');
   }

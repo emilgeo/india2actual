@@ -19,8 +19,18 @@ All notable changes to this project are recorded here. The format follows
   purchases.
 - A combined `Date & Time` column is recognised as the date.
 
+### Changed
+
+- Uses Actual API 26.10. Its SQLite module ships prebuilt binaries, so nothing is
+  compiled on install, but `--push` now needs Node 22.14 or newer. Older Node 22
+  releases crash when the module loads.
+- The minimum Node version is now 22.14 for the whole tool, not only `--push`.
+  npm warns on older releases.
+
 ### Fixed
 
+- `--push` on Node older than 22.14 now stops with a clear message instead of
+  crashing when the Actual API loads.
 - A first-time `--push` no longer fails with `ENOENT` when the local data
   directory does not exist yet.
 - Excel workbooks with a notes sheet longer than the statement are read from

@@ -104,6 +104,17 @@ export function toImportEntities(
   });
 }
 
+/** The Actual API's SQLite module crashes on Node older than this. */
+const MIN_PUSH_NODE = { major: 22, minor: 14 };
+
+export function nodeTooOldForPush(version: string): boolean {
+  const [major = 0, minor = 0] = version.split('.').map(Number);
+  return (
+    major < MIN_PUSH_NODE.major ||
+    (major === MIN_PUSH_NODE.major && minor < MIN_PUSH_NODE.minor)
+  );
+}
+
 export function isCardPayment(transaction: StatementTransaction): boolean {
   return (
     transaction.payee === CARD_PAYMENT_PAYEE ||

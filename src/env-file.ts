@@ -9,7 +9,7 @@ import { env, loadEnvFile } from 'node:process';
  * one-off `ACTUAL_SYNC_ID=other india2actual ...` still wins, and CI can
  * inject secrets without a file existing at all.
  *
- * Requires Node >= 22 (see `engines` in package.json).
+ * Requires Node >= 22.14 (see `engines` in package.json).
  */
 
 export type EnvFileResult =

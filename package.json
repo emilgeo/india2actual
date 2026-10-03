@@ -51,7 +51,7 @@
     "pdfjs-dist": "^6.3.289"
   },
   "optionalDependencies": {
-    "@actual-app/api": "^26.9.0"
+    "@actual-app/api": "^26.10.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -60,6 +60,6 @@
     "vitest": "^5.0.1"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.14"
   }
 }

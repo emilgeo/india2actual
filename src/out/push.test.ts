@@ -5,6 +5,7 @@ import type { StatementTransaction } from '../interpret/rows.js';
 import {
   findExistingCounterparts,
   isCardPayment,
+  nodeTooOldForPush,
   resolveAccount,
   toImportEntities,
   toPaise,
@@ -221,5 +222,19 @@ describe('findExistingCounterparts', () => {
     expect(
       findExistingCounterparts(rows, [existing('2025-03-10', -50000)]),
     ).toEqual([]);
+  });
+});
+
+describe('nodeTooOldForPush', () => {
+  it('rejects Node versions before 22.14', () => {
+    for (const version of ['20.18.0', '21.7.3', '22.0.0', '22.13.1']) {
+      expect(nodeTooOldForPush(version)).toBe(true);
+    }
+  });
+
+  it('accepts 22.14 and later, including newer majors', () => {
+    for (const version of ['22.14.0', '22.23.3', '24.1.0', '25.0.0']) {
+      expect(nodeTooOldForPush(version)).toBe(false);
+    }
   });
 });

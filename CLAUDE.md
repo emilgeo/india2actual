@@ -73,7 +73,7 @@ npm run build     # tsc, emits dist/
 npm run dev -- statement.csv   # run the CLI from source
 ```
 
-Node 22 or newer. ESM only (`"type": "module"`), so relative imports need the
+Node 22.14 or newer. ESM only (`"type": "module"`), so relative imports need the
 `.js` extension. TypeScript is strict, including `noUncheckedIndexedAccess` and
 `exactOptionalPropertyTypes`, so indexed access is possibly-undefined and
 optional properties cannot be assigned `undefined` explicitly.

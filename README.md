@@ -40,7 +40,7 @@ The bank's original text is kept in Notes, so nothing is lost.
 
 ## Quick start
 
-You need [Node.js](https://nodejs.org) 22 or newer. There is nothing else to
+You need [Node.js](https://nodejs.org) 22.14 or newer. There is nothing else to
 install.
 
 **Step 1. Download a statement from your bank.** Use internet banking rather
