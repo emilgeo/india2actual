@@ -1,3 +1,5 @@
+import { mkdir } from 'node:fs/promises';
+
 import type { StatementTransaction } from '../interpret/rows.js';
 
 /**
@@ -160,6 +162,9 @@ export async function pushTransactions(
         '  npm install --include=optional india2actual',
     );
   }
+
+  // The API reads this directory on startup and fails if it does not exist.
+  await mkdir(config.dataDir, { recursive: true });
 
   await api.init({
     dataDir: config.dataDir,

@@ -17,6 +17,8 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- A first-time `--push` no longer fails with `ENOENT` when the local data
+  directory does not exist yet.
 - Excel workbooks with a notes sheet longer than the statement are read from
   the sheet that holds the transactions.
 - Add supported and tested banks to README
