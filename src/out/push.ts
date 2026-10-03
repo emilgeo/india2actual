@@ -1,6 +1,10 @@
 import { mkdir } from 'node:fs/promises';
 
 import type { StatementTransaction } from '../interpret/rows.js';
+import {
+  CARD_AUTOPAY_PAYEE,
+  CARD_PAYMENT_PAYEE,
+} from '../narration/merchants.js';
 
 /**
  * The subset of Actual's `ImportTransactionEntity` we populate. Declared
@@ -12,7 +16,9 @@ export type ActualImportTransaction = {
   date: string;
   /** Integer paise. */
   amount: number;
-  payee_name: string;
+  payee_name?: string;
+  /** A payee id. Set only for a transfer, where Actual mirrors the transaction. */
+  payee?: string;
   imported_payee: string;
   notes: string;
   imported_id?: string;
@@ -29,6 +35,8 @@ export type PushConfig = {
   /** Account name (case-insensitive) or id. */
   account: string;
   dryRun: boolean;
+  /** Send card payments as transfers with this account. */
+  transferTo?: string;
 };
 
 export type PushResult = {
@@ -38,6 +46,14 @@ export type PushResult = {
   updated: number;
   errors: string[];
   dryRun: boolean;
+  /** Set with `transferTo`. */
+  transfer?: {
+    accountName: string;
+    /** Card payments sent as transfers. */
+    sent: number;
+    /** Payments imported as ordinary rows because the other side already exists. */
+    unlinked: Array<{ date: string; amount: number }>;
+  };
 };
 
 /** Rupees to integer paise, matching Actual's own `amountToInteger`. */
@@ -67,17 +83,89 @@ export function toPaise(amount: number): number {
  */
 export function toImportEntities(
   transactions: StatementTransaction[],
+  transfer?: { payeeId: string; skip: ReadonlySet<number> },
 ): ActualImportTransaction[] {
-  return transactions.map(transaction => ({
-    date: transaction.date,
-    amount: toPaise(transaction.amount),
-    payee_name: transaction.payee,
-    imported_payee: transaction.raw,
-    notes: transaction.raw,
-    ...(transaction.ref ? { imported_id: transaction.ref } : {}),
-    // Statement rows have already settled at the bank.
-    cleared: true,
-  }));
+  return transactions.map((transaction, index) => {
+    const asTransfer =
+      transfer && isCardPayment(transaction) && !transfer.skip.has(index);
+
+    return {
+      date: transaction.date,
+      amount: toPaise(transaction.amount),
+      ...(asTransfer
+        ? { payee: transfer.payeeId }
+        : { payee_name: transaction.payee }),
+      imported_payee: transaction.raw,
+      notes: transaction.raw,
+      ...(transaction.ref ? { imported_id: transaction.ref } : {}),
+      // Statement rows have already settled at the bank.
+      cleared: true,
+    };
+  });
+}
+
+export function isCardPayment(transaction: StatementTransaction): boolean {
+  return (
+    transaction.payee === CARD_PAYMENT_PAYEE ||
+    transaction.payee === CARD_AUTOPAY_PAYEE
+  );
+}
+
+/** Actual matches an imported row to an existing one within this many days. */
+const MATCH_WINDOW_DAYS = 7;
+
+export type ExistingTransaction = {
+  date: string;
+  /** Integer paise. */
+  amount: number;
+  transfer_id?: string | null;
+};
+
+function daysApart(a: string, b: string): number {
+  return Math.abs(Date.parse(a) - Date.parse(b)) / 86_400_000;
+}
+
+/**
+ * Indexes of card payments whose other side already exists as an ordinary
+ * transaction. Importing those as transfers would add a second outflow, since
+ * Actual mirrors a transfer instead of linking to a transaction already there.
+ * A counterpart is used at most once, and the nearest date wins.
+ */
+export function findExistingCounterparts(
+  transactions: StatementTransaction[],
+  existing: ExistingTransaction[],
+): number[] {
+  const free = existing.filter(row => !row.transfer_id);
+  const used = new Set<number>();
+  const found: number[] = [];
+
+  for (const [index, transaction] of transactions.entries()) {
+    if (!isCardPayment(transaction)) {
+      continue;
+    }
+
+    let best = -1;
+    let bestDistance = Infinity;
+    for (const [candidate, row] of free.entries()) {
+      const distance = daysApart(row.date, transaction.date);
+      if (
+        !used.has(candidate) &&
+        row.amount === -toPaise(transaction.amount) &&
+        distance <= MATCH_WINDOW_DAYS &&
+        distance < bestDistance
+      ) {
+        best = candidate;
+        bestDistance = distance;
+      }
+    }
+
+    if (best >= 0) {
+      used.add(best);
+      found.push(index);
+    }
+  }
+
+  return found;
 }
 
 type ActualAccount = { id: string; name: string; closed?: boolean };
@@ -99,6 +187,14 @@ type ActualApi = {
     options?: { password: string },
   ): Promise<unknown>;
   getAccounts(): Promise<ActualAccount[]>;
+  getPayees(): Promise<
+    Array<{ id: string; name: string; transfer_acct?: string | null }>
+  >;
+  getTransactions(
+    accountId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<ExistingTransaction[]>;
   importTransactions(
     accountId: string,
     transactions: ActualImportTransaction[],
@@ -114,6 +210,12 @@ type ActualApi = {
   }>;
   shutdown(): Promise<void>;
 };
+
+function shiftDate(date: string, days: number): string {
+  return new Date(Date.parse(date) + days * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
 
 export function resolveAccount(
   accounts: ActualAccount[],
@@ -183,9 +285,43 @@ export async function pushTransactions(
     const accounts = await api.getAccounts();
     const account = resolveAccount(accounts, config.account);
 
+    let transfer: { payeeId: string; skip: Set<number> } | undefined;
+    let transferAccountName: string | undefined;
+    if (config.transferTo) {
+      const other = resolveAccount(accounts, config.transferTo);
+      if (other.id === account.id) {
+        throw new Error('--transfer-to must name a different account.');
+      }
+
+      const payee = (await api.getPayees()).find(
+        candidate => candidate.transfer_acct === other.id,
+      );
+      if (!payee) {
+        throw new Error(`Actual has no transfer payee for "${other.name}".`);
+      }
+
+      const dates = transactions.filter(isCardPayment).map(t => t.date).sort();
+      const first = dates[0];
+      const last = dates[dates.length - 1];
+      const existing =
+        first && last
+          ? await api.getTransactions(
+              other.id,
+              shiftDate(first, -MATCH_WINDOW_DAYS),
+              shiftDate(last, MATCH_WINDOW_DAYS),
+            )
+          : [];
+
+      transfer = {
+        payeeId: payee.id,
+        skip: new Set(findExistingCounterparts(transactions, existing)),
+      };
+      transferAccountName = other.name;
+    }
+
     const result = await api.importTransactions(
       account.id,
-      toImportEntities(transactions),
+      toImportEntities(transactions, transfer),
       {
         dryRun: config.dryRun,
         defaultCleared: true,
@@ -203,6 +339,20 @@ export async function pushTransactions(
       updated: result.updated?.length ?? 0,
       errors: (result.errors ?? []).map(error => error.message),
       dryRun: config.dryRun,
+      ...(transfer && transferAccountName
+        ? {
+            transfer: {
+              accountName: transferAccountName,
+              sent: transactions.filter(
+                (t, index) => isCardPayment(t) && !transfer.skip.has(index),
+              ).length,
+              unlinked: [...transfer.skip].flatMap(index => {
+                const row = transactions[index];
+                return row ? [{ date: row.date, amount: row.amount }] : [];
+              }),
+            },
+          }
+        : {}),
     };
   } finally {
     // Always shut down: this flushes the sync and closes the budget, and

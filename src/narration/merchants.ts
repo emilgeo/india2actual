@@ -134,6 +134,10 @@ export const MERCHANT_RULES: MerchantRule[] = [
  * anchored to the start of a name, are never accidentally matched against the
  * middle of a narration.
  */
+/** Payees for the two sides of a card payment, used to link them as a transfer. */
+export const CARD_PAYMENT_PAYEE = 'Credit Card Payment';
+export const CARD_AUTOPAY_PAYEE = 'Credit Card Autopay';
+
 export const POSTING_RULES: MerchantRule[] = [
   { pattern: /wtaxpd/, name: 'Withholding Tax' },
   { pattern: /intpd/, name: 'Interest Paid' },
@@ -141,7 +145,7 @@ export const POSTING_RULES: MerchantRule[] = [
   { pattern: /sbint/, name: 'Interest Paid' },
   // Minimum average balance charge, billed monthly as `MABChgs-Mar2026`.
   { pattern: /mabchgs/, name: 'Minimum Balance Charge' },
-  { pattern: /autodebitcc/, name: 'Credit Card Autopay' },
+  { pattern: /autodebitcc/, name: CARD_AUTOPAY_PAYEE },
   // Debit card annual fee, e.g. `DCARDFEE0000AUG26-JUL27+GST`.
   { pattern: /dcardfee/, name: 'Debit Card Fee' },
   { pattern: /(atmwdl|cashwdl|nwdcash)/, name: 'ATM Withdrawal' },
@@ -150,7 +154,7 @@ export const POSTING_RULES: MerchantRule[] = [
   {
     pattern:
       /^(autodebitpaymentrecd|infinitypaymentreceived|bbpspaymentreceived|paymentreceivedthankyou)/,
-    name: 'Credit Card Payment',
+    name: CARD_PAYMENT_PAYEE,
   },
   { pattern: /^[ics]gst/, name: 'GST' },
   { pattern: /^dccfee/, name: 'Foreign Currency Fee' },

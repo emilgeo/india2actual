@@ -8,6 +8,10 @@ All notable changes to this project are recorded here. The format follows
 
 ### Added
 
+- `--transfer-to <account>` with `--push` sends card payments as transfers
+  between the bank and card accounts, so a payment is not counted as spending
+  in one and income in the other. Payments whose other side already exists as an
+  ordinary transaction are imported normally and reported.
 - Credit card statements that mark credits with a trailing `C` or `D` flag or a
   leading `+` are read with the right sign. A leading `C` is treated as a rupee
   sign.

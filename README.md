@@ -195,6 +195,39 @@ conventions (a trailing `C` or `D`, a leading `+` on credits, `DR` and `CR`
 markers, and summary lines for finance charges and fees) are handled from public
 documentation of those layouts and are unverified.
 
+### Card payments as transfers
+
+A card payment shows up twice: as an autopay debit on your bank statement and as
+a payment on your card statement. Imported as ordinary transactions, one looks
+like spending and the other like income. With `--push`, the tool can link them
+as a transfer instead:
+
+```bash
+# card statement: the payment becomes a transfer with your bank account
+india2actual card.pdf --push --account "ICICI Amazon Pay" --transfer-to "ICICI Savings"
+
+# bank statement: the autopay debit becomes a transfer with the card
+india2actual savings.pdf --push --account "ICICI Savings" --transfer-to "ICICI Amazon Pay"
+```
+
+Use the option on both runs, in either order. Whichever statement you import
+first creates the transfer, and the other one matches it instead of adding a
+second transaction.
+
+- It only works with `--push`. Actual's CSV import has no way to create
+  transfers.
+- Only payments the tool recognises as card payments are affected. Everything
+  else is imported as usual.
+- The two amounts must match, with dates within 7 days. A minimum-due payment
+  that differs from the autopay amount will not pair up.
+- If the other account already has an ordinary transaction for a payment, for
+  example from an earlier import without this option, that payment is imported
+  normally and the tool says so. Link that pair in Actual yourself, since the
+  API cannot link existing transactions.
+- With several cards, name the right card on each run.
+
+Tested against Actual 26.9.
+
 ## Reference
 
 ### Supported files
@@ -241,6 +274,7 @@ statement.
 | `--push`                     | Send to Actual directly instead of writing a CSV.                               |
 | `--account <name\|id>`       | Which Actual account to import into. Required with `--push`.                    |
 | `--dry-run`                  | With `--push`, report what would change without writing.                        |
+| `--transfer-to <account>`    | With `--push`, send card payments as transfers with this account. See [above](#card-payments-as-transfers). |
 | `--force`                    | Write even if the balance check fails.                                          |
 | `--quiet`                    | Only report problems.                                                           |
 

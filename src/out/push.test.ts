@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { StatementTransaction } from '../interpret/rows.js';
 
-import { resolveAccount, toImportEntities, toPaise } from './push.js';
+import {
+  findExistingCounterparts,
+  isCardPayment,
+  resolveAccount,
+  toImportEntities,
+  toPaise,
+} from './push.js';
 
 function transaction(
   overrides: Partial<StatementTransaction> = {},
@@ -104,5 +110,116 @@ describe('resolveAccount', () => {
     expect(() => resolveAccount(accounts, 'Nonexistent')).not.toThrow(
       /Old Account/,
     );
+  });
+});
+
+describe('card payments as transfers', () => {
+  const payment = (overrides: Partial<StatementTransaction> = {}) =>
+    transaction({
+      date: '2025-03-10',
+      amount: 500,
+      payee: 'Credit Card Payment',
+      raw: 'AUTODEBIT PAYMENT RECD.',
+      ...overrides,
+    });
+
+  it('recognises both sides of a card payment', () => {
+    expect(isCardPayment(payment())).toBe(true);
+    expect(isCardPayment(payment({ payee: 'Credit Card Autopay' }))).toBe(true);
+    expect(isCardPayment(transaction())).toBe(false);
+  });
+
+  it('sends a payment with the transfer payee id and no payee name', () => {
+    const [entity] = toImportEntities([payment()], {
+      payeeId: 'payee-bank',
+      skip: new Set(),
+    });
+
+    expect(entity).toMatchObject({ payee: 'payee-bank', amount: 50000 });
+    expect(entity).not.toHaveProperty('payee_name');
+    expect(entity?.notes).toBe('AUTODEBIT PAYMENT RECD.');
+  });
+
+  it('leaves other rows and skipped payments as ordinary payees', () => {
+    const entities = toImportEntities([transaction(), payment()], {
+      payeeId: 'payee-bank',
+      skip: new Set([1]),
+    });
+
+    expect(entities[0]).toMatchObject({ payee_name: 'Swiggy' });
+    expect(entities[1]).toMatchObject({ payee_name: 'Credit Card Payment' });
+    expect(entities[1]).not.toHaveProperty('payee');
+  });
+
+  it('sends nothing as a transfer when no account is given', () => {
+    const [entity] = toImportEntities([payment()]);
+
+    expect(entity).toMatchObject({ payee_name: 'Credit Card Payment' });
+  });
+});
+
+describe('findExistingCounterparts', () => {
+  const payment = (date: string, amount: number) =>
+    transaction({ date, amount, payee: 'Credit Card Payment' });
+  const existing = (date: string, amount: number, transfer_id?: string) => ({
+    date,
+    amount,
+    ...(transfer_id ? { transfer_id } : {}),
+  });
+
+  it('finds an ordinary opposite-amount transaction within the window', () => {
+    const rows = [payment('2025-03-10', 500)];
+
+    expect(
+      findExistingCounterparts(rows, [existing('2025-03-08', -50000)]),
+    ).toEqual([0]);
+    expect(
+      findExistingCounterparts(rows, [existing('2025-03-17', -50000)]),
+    ).toEqual([0]);
+  });
+
+  it('ignores a counterpart outside the window or with another amount', () => {
+    const rows = [payment('2025-03-10', 500)];
+
+    expect(
+      findExistingCounterparts(rows, [existing('2025-03-18', -50000)]),
+    ).toEqual([]);
+    expect(
+      findExistingCounterparts(rows, [existing('2025-03-10', -49900)]),
+    ).toEqual([]);
+    expect(
+      findExistingCounterparts(rows, [existing('2025-03-10', 50000)]),
+    ).toEqual([]);
+  });
+
+  it('ignores a transaction that is already a transfer', () => {
+    // A mirror from an earlier import is what the new row should match.
+    const rows = [payment('2025-03-10', 500)];
+
+    expect(
+      findExistingCounterparts(rows, [existing('2025-03-10', -50000, 't-1')]),
+    ).toEqual([]);
+  });
+
+  it('uses each counterpart once, preferring the nearest date', () => {
+    const rows = [payment('2025-03-10', 500), payment('2025-04-10', 500)];
+    const others = [
+      existing('2025-03-12', -50000),
+      existing('2025-03-09', -50000),
+    ];
+
+    // Only the March payment has a counterpart; the nearer one is used.
+    expect(findExistingCounterparts(rows, others)).toEqual([0]);
+    expect(
+      findExistingCounterparts([rows[0] as StatementTransaction, rows[0] as StatementTransaction], others),
+    ).toEqual([0, 1]);
+  });
+
+  it('only considers card payments', () => {
+    const rows = [transaction({ date: '2025-03-10', amount: 500 })];
+
+    expect(
+      findExistingCounterparts(rows, [existing('2025-03-10', -50000)]),
+    ).toEqual([]);
   });
 });

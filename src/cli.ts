@@ -46,6 +46,9 @@ Pushing straight into Actual (instead of writing a CSV):
   --push                Send the transactions to Actual via its API.
   --account <name|id>   Which Actual account to import into. Required for --push.
   --dry-run             With --push, report what would change without writing.
+  --transfer-to <acct>  With --push, send card payments as transfers with this
+                        account (the card for a bank statement, the bank for a
+                        card statement), so they are not counted twice.
 
 Settings come from a .env file in the current directory, or from real
 environment variables, which take precedence. Never from flags, which would
@@ -78,6 +81,7 @@ type Options = {
   push: boolean;
   account?: string;
   dryRun: boolean;
+  transferTo?: string;
   envFile?: string;
 };
 
@@ -144,6 +148,9 @@ function parseArgs(args: string[]): Options | null {
       case '--dry-run':
         options.dryRun = true;
         break;
+      case '--transfer-to':
+        options.transferTo = next();
+        break;
       case '--force':
         options.force = true;
         break;
@@ -171,6 +178,10 @@ function parseArgs(args: string[]): Options | null {
 
   if (options.dryRun && !options.push) {
     throw new Error('--dry-run only applies to --push');
+  }
+
+  if (options.transferTo && !options.push) {
+    throw new Error('--transfer-to only applies to --push');
   }
 
   return options;
@@ -337,6 +348,22 @@ async function run(args: string[]): Promise<number> {
         `${verb} ${result.added}, ${alsoVerb} ${result.updated}.\n`,
     );
 
+    if (result.transfer) {
+      const { accountName, sent, unlinked } = result.transfer;
+      stderr.write(
+        `  ${sent} card payment(s) ${result.dryRun ? 'would be ' : ''}sent as ` +
+          `transfers with ${accountName}.\n`,
+      );
+      if (unlinked.length) {
+        stderr.write(
+          `  ${unlinked.length} payment(s) imported as ordinary transactions ` +
+            `because ${accountName} already has a matching ordinary ` +
+            `transaction (${unlinked.map(row => `${row.date} ${row.amount.toFixed(2)}`).join(', ')}). ` +
+            'Link each pair in Actual so the payment is not counted twice.\n',
+        );
+      }
+    }
+
     for (const error of result.errors) {
       stderr.write(`  error: ${error}\n`);
     }
@@ -386,6 +413,7 @@ function pushConfigFromEnv(options: Options): PushConfig {
     dataDir: setting('ACTUAL_DATA_DIR') ?? join(cwd(), '.actual-cache'),
     account: options.account,
     dryRun: options.dryRun,
+    ...(options.transferTo ? { transferTo: options.transferTo } : {}),
     ...(encryptionPassword ? { encryptionPassword } : {}),
   };
 }
