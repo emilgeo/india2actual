@@ -3,5 +3,78 @@ title: india2actual
 description: Import Indian bank and credit card statements into Actual Budget, with real payee names instead of UPI reference strings.
 template: splash
 hero:
-  tagline: Get your Indian bank statements into Actual Budget, with real payee names.
+  tagline: Get your Indian bank statements into Actual Budget, with real payee names instead of UPI reference strings.
+  actions:
+    - text: Get started
+      link: /docs/#quick-start
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/emilgeo/india2actual
+      icon: external
+      variant: minimal
 ---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why this exists
+
+Actual has no bank sync for Indian banks, and is unlikely to get one soon.
+Reading bank data in India goes through the Account Aggregator framework, which
+is open to registered financial institutions with a commercial contract, not to
+a free open-source app. So the route is to download a statement and import it.
+india2actual makes that painless.
+
+## Try it
+
+```bash
+npx india2actual statement.csv
+```
+
+It reads CSV, Excel and PDF statements (including password-protected PDFs) and
+writes a file you can import into Actual. You need Node.js 22.14 or newer.
+
+## What it fixes
+
+Your bank describes two orders from the same shop with a different reference
+number each time, so Actual sees two payees:
+
+| What your bank writes                                  | What Actual gets |
+| ------------------------------------------------------ | ---------------- |
+| `UPI/DR/412345678901/SWIGGY/YESB/swiggy@ybl/Payment`   | Swiggy           |
+| `UPI/DR/419876543210/SWIGGY/YESB/swiggy@ybl/Payment`   | Swiggy           |
+
+The bank's original text is kept in Notes, so nothing is lost.
+
+<CardGrid stagger>
+  <Card title="Real payee names" icon="pencil">
+    UPI, NEFT, IMPS, card and ATM lines become one clean payee each, so reports
+    by payee and category learning work.
+  </Card>
+  <Card title="Checks its own work" icon="magnifier">
+    Every amount is checked against the statement's own balance, or a card
+    statement's printed totals. If it does not add up, nothing is written.
+  </Card>
+  <Card title="Credit cards too" icon="document">
+    Card statements are read with the right signs, payments are recognised, and
+    a card payment can be linked as a transfer with your bank account.
+  </Card>
+  <Card title="Import or push" icon="rocket">
+    Write a CSV for Actual's import dialog, or send the transactions straight
+    into your budget.
+  </Card>
+  <Card title="Safe to re-run" icon="setting">
+    Importing overlapping statements does not create duplicates.
+  </Card>
+  <Card title="Stays on your machine" icon="padlock">
+    Nothing is uploaded. The only connection the tool ever makes is to your own
+    Actual server, and only when you ask it to push.
+  </Card>
+</CardGrid>
+
+## Which banks work
+
+Tested on real statements: ICICI (savings and credit card, PDF), Federal Bank
+(savings, PDF), IDFC FIRST Bank (Excel) and CSB Bank (CSV). Other banks are
+expected to work but are not yet confirmed. See the full list in the
+[docs](/docs/#supported-banks), and if you try one, a report of what worked or
+failed is very welcome.

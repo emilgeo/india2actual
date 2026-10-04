@@ -1,0 +1,11 @@
+:root {
+  --sl-color-accent-low: #0b3b38;
+  --sl-color-accent: #14b8a6;
+  --sl-color-accent-high: #99f6e4;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #ccfbf1;
+  --sl-color-accent: #0f766e;
+  --sl-color-accent-high: #134e4a;
+}
