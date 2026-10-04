@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img">
+  <!-- Messy statement -->
+  <rect x="14" y="40" width="150" height="220" rx="16" fill="#334155" stroke="#64748b" stroke-width="2"/>
+  <g stroke="#94a3b8" stroke-width="6" stroke-linecap="round">
+    <path d="M36 78h104"/>
+    <path d="M36 102h76"/>
+    <path d="M36 126h112"/>
+    <path d="M36 150h64"/>
+    <path d="M36 174h100"/>
+    <path d="M36 198h84"/>
+    <path d="M36 222h108"/>
+  </g>
+  <g fill="#14b8a6">
+    <circle cx="150" cy="102" r="4"/>
+    <circle cx="116" cy="150" r="4"/>
+  </g>
+
+  <!-- Arrow -->
+  <g fill="none" stroke="#14b8a6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M178 150h44"/>
+    <path d="M208 132l18 18-18 18"/>
+  </g>
+
+  <!-- Clean transaction -->
+  <rect x="236" y="40" width="150" height="220" rx="16" fill="#0f766e"/>
+  <circle cx="361" cy="66" r="14" fill="#ffffff"/>
+  <path d="M354 66l5 5 9-10" fill="none" stroke="#0f766e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <g stroke-linecap="round">
+    <path d="M258 96h60" stroke="#ffffff" stroke-width="12"/>
+    <path d="M258 128h96" stroke="#99f6e4" stroke-width="7"/>
+    <path d="M258 152h72" stroke="#99f6e4" stroke-width="7"/>
+    <path d="M258 214h96" stroke="#ffffff" stroke-width="12"/>
+  </g>
+</svg>
