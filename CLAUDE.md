@@ -87,9 +87,42 @@ optional properties cannot be assigned `undefined` explicitly.
 | `src/narration`   | Parse the narration into a payee; the merchant map           |
 | `src/out`         | Write CSV, or push via `@actual-app/api`                     |
 | `src/env-file.ts` | Load settings from `.env`                                    |
+| `site/`           | Public website (Astro Starlight), see the Website section    |
 
 Formats are detected by **inspecting file contents, not the extension**,
 because Indian banks routinely name an HTML table `.xls`.
+
+## Website
+
+`site/` is the public website, built with Astro
+Starlight and deployed to GitHub Pages by `.github/workflows/site.yml`. It has
+its own `package.json` and lockfile and is not part of the npm package.
+
+```bash
+npm --prefix site ci          # install
+npm --prefix site run dev     # local preview, renders the docs pages first
+npm --prefix site run build   # the same build CI runs
+```
+
+- The landing page is `site/src/content/docs/index.mdx`. The docs and changelog
+  pages are **generated** from the root `README.md` and `CHANGELOG.md` by
+  `site/scripts/sync-docs.mjs` on every dev and build, and are gitignored. Never
+  edit `docs.md` or `changelog.md` under `site/src/content/docs/`; edit the
+  sources.
+- A behaviour change updates `README.md` in the same commit. The site holds no
+  separate copy of the docs, so there is nothing else to keep in step.
+- Keep the README and CHANGELOG valid for the script: its single top-level `#`
+  heading is dropped because the page title replaces it, repo-relative links are
+  rewritten to GitHub URLs, and `img.shields.io` badge images are stripped
+  because they would be third-party requests. Keep the `Quick start` and
+  `Supported banks` headings, since the landing page links to their anchors.
+- The site makes no third-party requests and has no analytics. Do not add
+  external scripts, fonts or trackers.
+- The same rules apply as everywhere else: no real statement data, no em
+  dashes. Content is `docs:`, tooling is `chore:`, and a site-only change needs
+  no changelog line.
+- After editing `site/scripts/og-image.svg`, regenerate the link preview image
+  with `npm --prefix site run og-image`.
 
 ## How payee resolution works
 
