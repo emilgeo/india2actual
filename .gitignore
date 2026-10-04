@@ -16,3 +16,8 @@ dist/
 
 # Scratch scripts for local verification, never published.
 *.local.ts
+
+# Docs site build output and dependencies.
+site/node_modules/
+site/dist/
+site/.astro/
