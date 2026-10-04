@@ -1,19 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#0b1f1e"/>
+  <rect width="1200" height="630" fill="#101114"/>
   <rect x="0" y="0" width="14" height="630" fill="#14b8a6"/>
   <g font-family="DejaVu Sans, Ubuntu, sans-serif">
-    <text x="80" y="140" font-size="76" font-weight="700" fill="#ffffff">india2actual</text>
+    <text x="80" y="140" font-size="76" font-weight="700" fill="#f2f1ed">india2actual</text>
     <text x="80" y="196" font-size="32" fill="#99f6e4">Indian bank statements into Actual Budget</text>
-    <text x="80" y="290" font-size="22" font-weight="700" fill="#64748b" letter-spacing="3">BEFORE</text>
+    <text x="80" y="290" font-size="22" font-weight="700" fill="#6b6d76" letter-spacing="3">BEFORE</text>
   </g>
-  <g font-family="DejaVu Sans Mono, Ubuntu Mono, monospace" font-size="27" fill="#94a3b8">
+  <g font-family="DejaVu Sans Mono, Ubuntu Mono, monospace" font-size="27" fill="#9a9ca6">
     <text x="80" y="332">UPI/DR/412345678901/SWIGGY/YESB/swiggy@ybl/Payment</text>
     <text x="80" y="374">UPI/DR/419876543210/SWIGGY/YESB/swiggy@ybl/Payment</text>
   </g>
   <g font-family="DejaVu Sans, Ubuntu, sans-serif">
     <text x="80" y="450" font-size="22" font-weight="700" fill="#2dd4bf" letter-spacing="3">AFTER</text>
-    <text x="80" y="508" font-size="48" font-weight="700" fill="#ffffff">Swiggy</text>
-    <text x="80" y="562" font-size="48" font-weight="700" fill="#ffffff">Swiggy</text>
-    <text x="1120" y="588" font-size="26" fill="#64748b" text-anchor="end">npx india2actual statement.csv</text>
+    <text x="80" y="508" font-size="48" font-weight="700" fill="#f2f1ed">Swiggy</text>
+    <text x="80" y="562" font-size="48" font-weight="700" fill="#f2f1ed">Swiggy</text>
+    <text x="1120" y="588" font-size="26" fill="#6b6d76" text-anchor="end">npx india2actual statement.csv</text>
   </g>
 </svg>

@@ -1,10 +1,30 @@
+/* Warm paper and ink neutrals with a teal accent. */
 :root {
+  --sl-color-white: #f2f1ed;
+  --sl-color-gray-1: #e4e2dc;
+  --sl-color-gray-2: #cfcec9;
+  --sl-color-gray-3: #9a9ca6;
+  --sl-color-gray-4: #6b6d76;
+  --sl-color-gray-5: #26272c;
+  --sl-color-gray-6: #1a1b20;
+  --sl-color-black: #101114;
+
   --sl-color-accent-low: #0b3b38;
   --sl-color-accent: #14b8a6;
   --sl-color-accent-high: #99f6e4;
 }
 
 :root[data-theme='light'] {
+  --sl-color-white: #15161b;
+  --sl-color-gray-1: #25262c;
+  --sl-color-gray-2: #3f4048;
+  --sl-color-gray-3: #5b5d66;
+  --sl-color-gray-4: #8a8c94;
+  --sl-color-gray-5: #e4e2dc;
+  --sl-color-gray-6: #efeeea;
+  --sl-color-gray-7: #f3f2ee;
+  --sl-color-black: #f7f6f3;
+
   --sl-color-accent-low: #ccfbf1;
   --sl-color-accent: #0f766e;
   --sl-color-accent-high: #134e4a;
