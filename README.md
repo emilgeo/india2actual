@@ -6,6 +6,8 @@
 Get your Indian bank statements into [Actual Budget](https://actualbudget.org),
 with **real payee names instead of UPI reference strings**.
 
+Website: <https://india2actual.emil.ge>
+
 ## Why this exists
 
 **1. Actual has no bank sync for Indian banks, and is unlikely to get one soon.**
