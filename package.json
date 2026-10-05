@@ -4,7 +4,7 @@
   "description": "Convert Indian bank statements (CSV, XLS, PDF) into Actual Budget transactions with real merchant names",
   "license": "MIT",
   "author": "emilgeo",
-  "homepage": "https://github.com/emilgeo/india2actual#readme",
+  "homepage": "https://india2actual.emil.ge",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/emilgeo/india2actual.git"
