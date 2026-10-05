@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+## 0.3.0 - 2026-10-05
+
 ### Added
 
 - `--transfer-to <account>` with `--push` sends card payments as transfers
