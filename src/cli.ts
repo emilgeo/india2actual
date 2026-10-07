@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import { argv, cwd, env, exit, stderr, stdout, versions } from 'node:process';
 
@@ -40,7 +41,8 @@ Options:
   --env-file <path>     Read settings from this file instead of ./.env.
   --force               Write the CSV even if the balance check fails.
   --quiet               Only report problems.
-  --help                Show this message.
+  --help, -h            Show this message.
+  --version, -v         Show the installed version.
 
 Pushing straight into Actual (instead of writing a CSV):
   --push                Send the transactions to Actual via its API.
@@ -193,7 +195,20 @@ function defaultOutPath(input: string): string {
   return join(dirname(input), `${name}.actual.csv`);
 }
 
+function packageVersion(): string {
+  // Resolves to the package root from both src/ and dist/.
+  const manifest = JSON.parse(
+    readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+  ) as { version: string };
+  return manifest.version;
+}
+
 async function run(args: string[]): Promise<number> {
+  if (args.includes('--version') || args.includes('-v')) {
+    stdout.write(`${packageVersion()}\n`);
+    return 0;
+  }
+
   const options = parseArgs(args);
   if (!options) {
     stdout.write(`${USAGE}\n`);
