@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+## 0.4.0 - 2026-10-07
+
 ### Added
 
 - `--version` (or `-v`) prints the installed version.
