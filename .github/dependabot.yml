@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    # Raises the range in package.json (for example ^26.10.0 to ^26.11.0), so a
+    # new Actual API release is a visible change instead of a lockfile-only one.
+    versioning-strategy: increase
+    commit-message:
+      prefix: chore
+    groups:
+      # Dev tooling is batched. Runtime dependencies, including the Actual API,
+      # each get their own pull request so a breaking release stands out.
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+    groups:
+      site:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+    groups:
+      actions:
+        patterns: ["*"]
