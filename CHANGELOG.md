@@ -9,6 +9,9 @@ All notable changes to this project are recorded here. The format follows
 ### Added
 
 - `--version` (or `-v`) prints the installed version.
+- `--debug-layout` prints a report on how a statement was read (detected
+  columns, row and transaction counts, balance check result) with all text
+  masked, so it can be pasted into a bug report without sharing the statement.
 
 ## 0.3.0 - 2026-10-05
 

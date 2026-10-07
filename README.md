@@ -279,6 +279,7 @@ statement.
 | `--transfer-to <account>`    | With `--push`, send card payments as transfers with this account. See [above](#card-payments-as-transfers). |
 | `--force`                    | Write even if the balance check fails.                                          |
 | `--quiet`                    | Only report problems.                                                           |
+| `--debug-layout`             | Print a report on how the file was read, safe to paste into an issue, and write nothing. |
 | `--help`, `-h`               | Show the usage text.                                                            |
 | `--version`, `-v`            | Show the installed version.                                                     |
 

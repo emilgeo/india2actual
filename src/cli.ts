@@ -20,6 +20,7 @@ import type { MerchantRule } from './narration/merchants.js';
 import { toCsv, writeCsv } from './out/csv.js';
 import { nodeTooOldForPush, pushTransactions } from './out/push.js';
 import type { PushConfig } from './out/push.js';
+import { buildReport } from './report.js';
 
 const USAGE = `
 india2actual: convert Indian bank statements for Actual Budget
@@ -40,6 +41,9 @@ Options:
                         detected from the statement itself.
   --env-file <path>     Read settings from this file instead of ./.env.
   --force               Write the CSV even if the balance check fails.
+  --debug-layout        Print a report on how the file was read, with all text
+                        masked so it is safe to paste into an issue, and write
+                        nothing.
   --quiet               Only report problems.
   --help, -h            Show this message.
   --version, -v         Show the installed version.
@@ -78,6 +82,7 @@ type Options = {
   delimiter?: string;
   merchants?: string;
   card: boolean;
+  debugLayout: boolean;
   force: boolean;
   quiet: boolean;
   push: boolean;
@@ -99,6 +104,7 @@ function parseArgs(args: string[]): Options | null {
     force: false,
     quiet: false,
     card: false,
+    debugLayout: false,
     push: false,
     dryRun: false,
   };
@@ -153,6 +159,9 @@ function parseArgs(args: string[]): Options | null {
       case '--transfer-to':
         options.transferTo = next();
         break;
+      case '--debug-layout':
+        options.debugLayout = true;
+        break;
       case '--force':
         options.force = true;
         break;
@@ -176,6 +185,10 @@ function parseArgs(args: string[]): Options | null {
 
   if (options.push && !options.account) {
     throw new Error('--push also needs --account <name|id>');
+  }
+
+  if (options.debugLayout && options.push) {
+    throw new Error('--debug-layout cannot be combined with --push');
   }
 
   if (options.dryRun && !options.push) {
@@ -252,6 +265,30 @@ async function run(args: string[]): Promise<number> {
     ...(pdfPassword ? { password: pdfPassword } : {}),
   });
   log(`Read ${options.input} as ${describeFormat(format)}`);
+
+  if (options.debugLayout) {
+    const interpreted = interpretTable(table, {
+      dateOrder: options.dateOrder,
+      ...(options.card ? { card: true } : {}),
+      ...(merchantRules.length ? { merchantRules } : {}),
+    });
+    stdout.write(
+      buildReport({
+        version: packageVersion(),
+        node: versions.node,
+        format: describeFormat(format),
+        table,
+        result: interpreted,
+        validation: interpreted
+          ? interpreted.card
+            ? validateCardTotals(interpreted.transactions, table.figures)
+            : validateBalances(interpreted.transactions)
+          : null,
+        checkName: interpreted?.card ? 'Statement totals check' : 'Balance check',
+      }),
+    );
+    return 0;
+  }
 
   // Our own output is passed through rather than re-parsed, so that payees
   // corrected by hand in the CSV survive.
