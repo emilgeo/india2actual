@@ -230,6 +230,35 @@ second transaction.
 
 Tested against Actual 26.9.
 
+## Help test your bank
+
+This tool needs help from you to test statements from unverified banks. The tool runs on your own computer and uploads nothing.
+
+1. Run it on a statement as usual: `npx india2actual statement.pdf`.
+2. If it says `Balance check passed` (or `Statement totals check passed` for a
+   card), it worked.
+3. If it did not, run it again with `--debug-layout` and keep the output:
+   `npx india2actual statement.pdf --debug-layout`.
+4. Fill in the [bank report form](https://github.com/emilgeo/india2actual/issues/new?template=bank-report.yml).
+
+The report shows how the file was read: the columns it found, row counts and
+the balance check result. Letters are printed as `x` and digits as `9`, so it
+carries no names, account numbers or amounts. Read it before you post it, and
+please never attach or paste the statement itself.
+
+What is most wanted (see [Supported banks](#supported-banks) for formats):
+
+| Bank                                    | Savings | Credit card |
+| --------------------------------------- | ------- | ----------- |
+| ICICI                                   | Tested  | Tested      |
+| Federal Bank, IDFC FIRST Bank, CSB Bank | Tested  |             |
+| HDFC, SBI, Axis, Kotak, IndusInd        | Wanted  | Wanted      |
+| PNB, Bank of Baroda, Canara, Yes Bank   | Wanted  |             |
+| Any other bank                          | Wanted  | Wanted      |
+
+A bank can ship more than one layout, so a report on a newer statement from a
+bank that is already tested is useful too.
+
 ## Reference
 
 ### Supported files
@@ -253,35 +282,34 @@ Tested against Actual 26.9.
 | CSB Bank                                                          | Savings     | CSV                                         | Tested     |
 | HDFC                                                              | Savings     | CSV, Excel                                  | Unverified |
 | SBI, Axis, Kotak, PNB, Bank of Baroda, Canara, IndusInd, Yes Bank | Savings     | CSV, Excel, PDF                             | Unverified |
-| HDFC, SBI, Axis, Kotak, IndusInd                                  | Credit card | PDF                                          | Unverified |
+| HDFC, SBI, Axis, Kotak, IndusInd                                  | Credit card | PDF                                         | Unverified |
 
 **Tested** means a real statement was run and the output checked. **Unverified**
 means the bank's usual layout is expected to work, but nobody has confirmed it
 on a real file. If you try one, a report of what worked or failed is very
-welcome. The most useful report is the header row and a few narrations with
-names, numbers and references replaced by fakes. Please never share a real
-statement.
+welcome: see [Help test your bank](#help-test-your-bank). Please never share a
+real statement.
 
 ### Options
 
-| Option                       | Purpose                                                                         |
-| ---------------------------- | ------------------------------------------------------------------------------- |
-| `--out <path>`               | Where to write the CSV. Default `<input>.actual.csv`.                           |
-| `--stdout`                   | Print the result instead of writing a file.                                     |
-| `--date-order dmy\|mdy\|ymd` | Only affects all-numeric dates, where `01/02/2024` is ambiguous. Default `dmy`. |
-| `--delimiter <char>`         | Force the CSV delimiter instead of detecting it.                                |
-| `--merchants <path>`         | Your own payee rules. See [above](#fixing-a-payee-name).                        |
-| `--card`                     | Read the file as a credit card statement. Normally detected automatically.      |
-| `--env-file <path>`          | Read settings from this file instead of `./.env`.                               |
-| `--push`                     | Send to Actual directly instead of writing a CSV.                               |
-| `--account <name\|id>`       | Which Actual account to import into. Required with `--push`.                    |
-| `--dry-run`                  | With `--push`, report what would change without writing.                        |
+| Option                       | Purpose                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `--out <path>`               | Where to write the CSV. Default `<input>.actual.csv`.                                                       |
+| `--stdout`                   | Print the result instead of writing a file.                                                                 |
+| `--date-order dmy\|mdy\|ymd` | Only affects all-numeric dates, where `01/02/2024` is ambiguous. Default `dmy`.                             |
+| `--delimiter <char>`         | Force the CSV delimiter instead of detecting it.                                                            |
+| `--merchants <path>`         | Your own payee rules. See [above](#fixing-a-payee-name).                                                    |
+| `--card`                     | Read the file as a credit card statement. Normally detected automatically.                                  |
+| `--env-file <path>`          | Read settings from this file instead of `./.env`.                                                           |
+| `--push`                     | Send to Actual directly instead of writing a CSV.                                                           |
+| `--account <name\|id>`       | Which Actual account to import into. Required with `--push`.                                                |
+| `--dry-run`                  | With `--push`, report what would change without writing.                                                    |
 | `--transfer-to <account>`    | With `--push`, send card payments as transfers with this account. See [above](#card-payments-as-transfers). |
-| `--force`                    | Write even if the balance check fails.                                          |
-| `--quiet`                    | Only report problems.                                                           |
-| `--debug-layout`             | Print a report on how the file was read, safe to paste into an issue, and write nothing. |
-| `--help`, `-h`               | Show the usage text.                                                            |
-| `--version`, `-v`            | Show the installed version.                                                     |
+| `--force`                    | Write even if the balance check fails.                                                                      |
+| `--quiet`                    | Only report problems.                                                                                       |
+| `--debug-layout`             | Print a report on how the file was read, safe to paste into an issue, and write nothing.                    |
+| `--help`, `-h`               | Show the usage text.                                                                                        |
+| `--version`, `-v`            | Show the installed version.                                                                                 |
 
 ### Settings
 
