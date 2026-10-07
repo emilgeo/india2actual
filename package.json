@@ -1,6 +1,6 @@
 {
   "name": "india2actual",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Convert Indian bank statements (CSV, XLS, PDF) into Actual Budget transactions with real merchant names",
   "license": "MIT",
   "author": "emilgeo",
