@@ -1,0 +1,89 @@
+name: Bank or statement report
+description: Tell us a statement worked, or that it was not read correctly
+title: "[Bank report] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing. **Please do not attach or paste your statement.**
+        This is a public page, and a statement holds names, account numbers and
+        amounts. Run the tool on your own computer and share only its masked
+        report:
+
+        ```
+        npx india2actual statement.pdf --debug-layout
+        ```
+
+        The report shows letters as `x` and digits as `9`. Read it before you
+        paste it.
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: What happened
+      options:
+        - It worked and the balance check passed
+        - It worked but some payees look wrong
+        - No transaction table was found
+        - The balance check failed
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: bank
+    attributes:
+      label: Bank or card issuer
+      placeholder: For example, HDFC Bank
+    validations:
+      required: true
+  - type: dropdown
+    id: product
+    attributes:
+      label: Kind of account
+      options:
+        - Savings or current account
+        - Credit card
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: File type
+      options:
+        - PDF
+        - CSV
+        - Excel (.xlsx)
+        - HTML table saved as .xls
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `npx india2actual --version`.
+      placeholder: 0.3.0
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Layout report
+      description: >-
+        The output of `--debug-layout`. Needed when something went wrong, and
+        helpful when it worked.
+      render: text
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: >-
+        For payees that look wrong, describe the shape of the narration with
+        every name, number and reference replaced by a made-up one.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I have read what I am posting, and it holds no real names, account numbers or amounts.
+          required: true
