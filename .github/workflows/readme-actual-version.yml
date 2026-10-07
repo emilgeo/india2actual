@@ -1,0 +1,41 @@
+name: Readme Actual version
+
+# After a dependency bump lands on main, copy the locked Actual API version into
+# the README line that names it.
+on:
+  push:
+    branches: [main]
+    paths:
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Update the README
+        run: node scripts/sync-actual-version.mjs
+      - name: Commit the change
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet README.md; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: update the tested Actual version in the readme" README.md
+          git push
+          # A push made with the workflow token does not start other workflows,
+          # so the site, which is built from the README, is started explicitly.
+          gh workflow run site.yml
