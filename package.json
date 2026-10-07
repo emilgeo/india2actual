@@ -46,7 +46,7 @@
     "csv-parse": "^7.0.2",
     "csv-stringify": "^6.5.0",
     "exceljs": "^4.4.0",
-    "fast-xml-parser": "^5.11.1",
+    "fast-xml-parser": "^5.11.2",
     "node-html-parser": "^9.0.4",
     "pdfjs-dist": "^6.3.289"
   },
