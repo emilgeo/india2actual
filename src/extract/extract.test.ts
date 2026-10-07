@@ -11,7 +11,7 @@ import { tableFromHtml } from './html-table.js';
 import { detectFormat } from './sniff.js';
 import { tableFromSpreadsheetMl } from './spreadsheetml.js';
 
-import { extractTable } from './index.js';
+import { extractTables } from './index.js';
 
 const HEADER = [
   'Date',
@@ -92,7 +92,10 @@ describe('xlsx extraction', () => {
     const path = join(workDir, 'statement.xlsx');
     await workbook.xlsx.writeFile(path);
 
-    const { table, format } = await extractTable(path);
+    const {
+      tables: [table],
+      format,
+    } = await extractTables(path);
     expect(format).toBe('xlsx');
 
     const result = interpretTable(table);
@@ -121,7 +124,9 @@ describe('xlsx extraction', () => {
     const path = join(workDir, 'dates.xlsx');
     await workbook.xlsx.writeFile(path);
 
-    const { table } = await extractTable(path);
+    const {
+      tables: [table],
+    } = await extractTables(path);
     const result = interpretTable(table);
 
     expect(result?.transactions[0]?.date).toBe('2024-03-04');
@@ -142,7 +147,9 @@ describe('xlsx extraction', () => {
     const path = join(workDir, 'notes-sheet.xlsx');
     await workbook.xlsx.writeFile(path);
 
-    const { table } = await extractTable(path);
+    const {
+      tables: [table],
+    } = await extractTables(path);
 
     expect(table.source.part).toBe('Account Statement');
     expect(interpretTable(table)?.transactions).toHaveLength(2);
@@ -218,7 +225,10 @@ describe('HTML-table extraction', () => {
     const path = join(workDir, 'disguised.xls');
     await writeFile(path, html, 'utf8');
 
-    const { format, table } = await extractTable(path);
+    const {
+      format,
+      tables: [table],
+    } = await extractTables(path);
 
     expect(format).toBe('html');
     expect(interpretTable(table)?.transactions).toHaveLength(2);
@@ -281,6 +291,6 @@ describe('legacy binary .xls', () => {
       Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0x00, 0x00]),
     );
 
-    await expect(extractTable(path)).rejects.toThrow(/Save As/i);
+    await expect(extractTables(path)).rejects.toThrow(/Save As/i);
   });
 });

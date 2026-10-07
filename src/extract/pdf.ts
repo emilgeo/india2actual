@@ -58,6 +58,22 @@ const TABLE_LEFT_MARGIN = 40;
 /** Share of the next column an item must cover to count as crossing a gutter. */
 const GUTTER_CROSSING = 0.5;
 
+/** Widest vertical gap between two lines of one table header. */
+const MAX_HEADER_GAP = 24;
+
+/**
+ * How far a date may start from the header label naming its column. A date
+ * elsewhere on the line, such as a tax summary's payment date, is not a
+ * transaction.
+ */
+const DATE_ALIGNMENT = 50;
+
+/** How far above a table's header its account title may sit. */
+const TITLE_REACH = 70;
+
+/** A masked or full account number, capturing its last four digits. */
+const ACCOUNT_REF = /[Xx*]{2,}[\s-]?(\d{4})\b|\b\d{5,14}(\d{4})\b/;
+
 /**
  * A date at the start of a text item. `parseStatementDate` alone reads any three
  * numbers as a date, so terms prose such as `5% of 1,00,000 + 7,800` becomes a
@@ -449,6 +465,126 @@ export function trimToTable(lines: Line[]): Line[] {
     .filter(line => line.items.length);
 }
 
+/** Groups of header lines that form one table header, as line indexes. */
+function headerGroups(lines: Line[]): number[][] {
+  const groups: number[][] = [];
+  let lastAnchor = -1;
+
+  for (const [index, line] of lines.entries()) {
+    if (isAnchorLine(line)) {
+      lastAnchor = index;
+      continue;
+    }
+    if (!isHeaderLine(line)) {
+      continue;
+    }
+
+    const group = groups[groups.length - 1];
+    const previous = group ? lines[group[group.length - 1] as number] : undefined;
+    if (
+      group &&
+      previous &&
+      lastAnchor < (group[group.length - 1] as number) &&
+      previous.page === line.page &&
+      previous.y - line.y <= MAX_HEADER_GAP
+    ) {
+      group.push(index);
+    } else {
+      groups.push([index]);
+    }
+  }
+
+  return groups;
+}
+
+function isAligned(line: Line, dateLabels: number[]): boolean {
+  return line.items.some(
+    item =>
+      LEADING_DATE.test(item.text) &&
+      parseStatementDate(item.text) !== null &&
+      dateLabels.some(x => Math.abs(item.x - x) <= DATE_ALIGNMENT),
+  );
+}
+
+/** Last four digits of the account number nearest above a table's header. */
+function accountNear(above: Line[], header: Line): string | undefined {
+  for (let index = above.length - 1; index >= 0; index -= 1) {
+    const line = above[index];
+    if (!line || line.page !== header.page || line.y - header.y > TITLE_REACH) {
+      break;
+    }
+    const match = ACCOUNT_REF.exec(line.items.map(item => item.text).join(' '));
+    const tail = match?.[1] ?? match?.[2];
+    if (tail) {
+      return tail;
+    }
+  }
+  return undefined;
+}
+
+/** One table of a statement, with the text printed above it. */
+export type Section = { lines: Line[]; above: Line[]; account?: string };
+
+/**
+ * Split a statement into its tables, one per account.
+ *
+ * Consolidated statements print every account's table in turn, each with its
+ * own title and header. A header only starts a section when dated rows
+ * follow it, which leaves out summary tables whose labels read like a header.
+ * Dated lines that do not sit under the header's date column are dropped, so a
+ * notice with a date in it cannot bridge the columns.
+ */
+export function splitSections(lines: Line[]): Section[] {
+  const groups = headerGroups(lines);
+  const live = groups.filter((group, position) => {
+    const end = groups[position + 1]?.[0] ?? lines.length;
+    const last = group[group.length - 1] as number;
+    return lines.slice(last + 1, end).some(isAnchorLine);
+  });
+
+  const sections: Section[] = [];
+  let claimed = 0;
+
+  for (const [position, group] of live.entries()) {
+    const start = group[0] as number;
+    const end = live[position + 1]?.[0] ?? lines.length;
+    const region = lines.slice(start, end);
+
+    const dateLabels = group
+      .flatMap(index => lines[index]?.items ?? [])
+      .filter(item => {
+        const role = roleForHeader(item.text);
+        return role === 'date' || role === 'valueDate';
+      })
+      .map(item => item.x);
+
+    const anchors = region.filter(isAnchorLine);
+    const aligned = anchors.filter(line => isAligned(line, dateLabels));
+    // With no aligned date at all the labels are not a reliable guide.
+    const kept = new Set(aligned.length ? aligned : anchors);
+
+    const above = lines.slice(claimed, start);
+    const header = lines[start] as Line;
+    sections.push({
+      lines: region.filter(line => !isAnchorLine(line) || kept.has(line)),
+      above,
+      ...(accountNear(above, header)
+        ? { account: accountNear(above, header) as string }
+        : {}),
+    });
+
+    let lastKept = 0;
+    for (const [offset, line] of region.entries()) {
+      if (kept.has(line)) {
+        lastKept = offset;
+      }
+    }
+    claimed = start + lastKept + 1;
+  }
+
+  return sections;
+}
+
 export function assembleRows(lines: Line[], bands: Band[]): string[][] {
   const fragmentsFor = lines.map(line => toFragments(line, bands));
   const isAnchor = lines.map(isAnchorLine);
@@ -625,6 +761,61 @@ export function assembleRows(lines: Line[], bands: Band[]): string[][] {
   return rows;
 }
 
+const TOTAL_AMOUNT = /^-?[\d,]+\.\d{2}(\s*(cr|dr))?$/i;
+
+/**
+ * The lines that make up a table: everything down to its last dated row, and
+ * what sits directly below it on that page, such as a totals row. Notices
+ * further down the page are left out.
+ */
+function tableBody(lines: Line[]): Line[] {
+  const last = lines.map(isAnchorLine).lastIndexOf(true);
+  const anchor = lines[last];
+  if (!anchor) {
+    return lines;
+  }
+  return lines.filter(
+    (line, index) =>
+      index <= last ||
+      (line.page === anchor.page && anchor.y - line.y <= MAX_CONTINUATION_BELOW),
+  );
+}
+
+/**
+ * Opening and closing balance rows and column totals printed in a table.
+ * A row with one amount is labelled by the row alone; a row with several is
+ * labelled with each column's header, so `Total` over three columns gives
+ * `Total DEPOSITS`, `Total WITHDRAWALS` and so on.
+ */
+export function readTotals(
+  lines: Line[],
+  bands: Band[],
+  header: string[],
+): Figure[] {
+  const figures: Figure[] = [];
+
+  for (const line of tableBody(lines).filter(isSummaryLine)) {
+    const amounts = line.items.filter(item =>
+      TOTAL_AMOUNT.test(item.text.trim()),
+    );
+    const label = line.items
+      .filter(item => !TOTAL_AMOUNT.test(item.text.trim()))
+      .map(item => item.text.trim())
+      .join(' ')
+      .replace(/[:\s]+$/, '');
+
+    for (const item of amounts) {
+      const column = header[bandOf(item, bands)]?.trim();
+      figures.push({
+        label: amounts.length > 1 && column ? `${label} ${column}` : label,
+        value: item.text.trim(),
+      });
+    }
+  }
+
+  return figures;
+}
+
 const FIGURE = /^[^\d-]{0,3}-?[\d,]+\.\d{2}$/;
 
 /** How far below its label a summary figure may be printed. */
@@ -672,20 +863,51 @@ export function readFigures(lines: Line[]): Figure[] {
 
 const letterRun = /[a-z]{3}/i;
 
+/** Build a statement's tables from its positioned text lines. */
+export function tablesFromLines(
+  allLines: Line[],
+  source: Table['source'],
+): Table[] {
+  const sections = splitSections(allLines);
+  if (!sections.length) {
+    const lines = trimToTable(allLines);
+    const above = allLines.slice(0, Math.max(0, firstHeaderIndex(allLines)));
+    return [
+      {
+        rows: assembleRows(lines, inferBands(lines)),
+        preamble: above.map(line => line.items.map(item => item.text).join(' ')),
+        figures: readFigures(above),
+        source,
+      },
+    ];
+  }
+
+  return sections.map(section => {
+    const lines = trimToTable(section.lines);
+    const bands = inferBands(lines);
+    const rows = assembleRows(lines, bands);
+    const totals = readTotals(lines, bands, rows[0] ?? []);
+    return {
+      rows,
+      preamble: section.above.map(line =>
+        line.items.map(item => item.text).join(' '),
+      ),
+      figures: readFigures(section.above),
+      ...(totals.length ? { totals } : {}),
+      ...(section.account ? { account: section.account } : {}),
+      source,
+    };
+  });
+}
+
 export async function extractPdf(
   path: string,
   options: PdfExtractOptions = {},
-): Promise<Table> {
-  const { lines: allLines, pages } = await readLines(path, options);
-  const lines = trimToTable(allLines);
-  const bands = inferBands(lines);
-
-  const above = allLines.slice(0, Math.max(0, firstHeaderIndex(allLines)));
-
-  return {
-    rows: assembleRows(lines, bands),
-    preamble: above.map(line => line.items.map(item => item.text).join(' ')),
-    figures: readFigures(above),
-    source: { path, format: 'pdf', part: `${pages} page(s)` },
-  };
+): Promise<Table[]> {
+  const { lines, pages } = await readLines(path, options);
+  return tablesFromLines(lines, {
+    path,
+    format: 'pdf',
+    part: `${pages} page(s)`,
+  });
 }

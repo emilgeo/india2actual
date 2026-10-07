@@ -203,3 +203,95 @@ export function validateCardTotals(
     ),
   };
 }
+
+const SECTION_CREDITS = /^total\b.*\b(deposit|credit)s?\b/i;
+const SECTION_DEBITS = /^total\b.*\b(withdrawal|debit)s?\b/i;
+const SECTION_CLOSING = /^(closing balance|total\b.*\bbalance)$/i;
+const SECTION_OPENING = /^(opening balance|b\/f)$/i;
+
+function printedFigure(figures: Figure[], label: RegExp): number | null {
+  const found = figures.find(figure => label.test(figure.label));
+  return found ? parseAmount(found.value) : null;
+}
+
+/**
+ * Verify an account's rows against the totals printed in its own table.
+ *
+ * Statements that hold several accounts print a totals row or a closing
+ * balance for each, which catches a dropped or misread row even where the
+ * running balance happens to stay consistent. Skipped when the table prints
+ * none of them.
+ */
+export function validateSectionTotals(
+  transactions: StatementTransaction[],
+  totals: Figure[] = [],
+): Validation {
+  const checks: Array<{ name: string; stated: number; parsed: number }> = [];
+  const credits = printedFigure(totals, SECTION_CREDITS);
+  const debits = printedFigure(totals, SECTION_DEBITS);
+  const closing = printedFigure(totals, SECTION_CLOSING);
+  const opening = printedFigure(totals, SECTION_OPENING);
+
+  if (credits !== null) {
+    checks.push({
+      name: 'Deposits',
+      stated: Math.abs(credits),
+      parsed: transactions.reduce((sum, t) => sum + Math.max(t.amount, 0), 0),
+    });
+  }
+  if (debits !== null) {
+    checks.push({
+      name: 'Withdrawals',
+      stated: Math.abs(debits),
+      parsed: -transactions.reduce((sum, t) => sum + Math.min(t.amount, 0), 0),
+    });
+  }
+  const balances = transactions
+    .map(t => t.balance)
+    .filter((balance): balance is number => balance !== undefined);
+  // Either end, since statements run oldest first or newest first.
+  const ends = [balances[0], balances[balances.length - 1]].filter(
+    (balance): balance is number => balance !== undefined,
+  );
+  const nearest = (value: number) =>
+    [...ends].sort((a, b) => Math.abs(a - value) - Math.abs(b - value))[0];
+
+  if (closing !== null && ends.length) {
+    checks.push({
+      name: 'Closing balance',
+      stated: closing,
+      parsed: nearest(closing) as number,
+    });
+  }
+  if (opening !== null && ends.length) {
+    const expected = opening + transactions.reduce((sum, t) => sum + t.amount, 0);
+    checks.push({
+      name: 'Opening balance plus movement',
+      stated: nearest(expected) as number,
+      parsed: expected,
+    });
+  }
+
+  if (!checks.length) {
+    return {
+      status: 'skipped',
+      checked: 0,
+      matched: 0,
+      issues: ['The table prints no totals to cross-check.'],
+    };
+  }
+
+  const failures = checks.filter(
+    check => Math.abs(check.stated - check.parsed) >= EPSILON,
+  );
+
+  return {
+    status: failures.length ? 'failed' : 'passed',
+    checked: checks.length,
+    matched: checks.length - failures.length,
+    issues: failures.map(
+      check =>
+        `${check.name}: the statement says ${check.stated.toFixed(2)} but the parsed rows give ${check.parsed.toFixed(2)}`,
+    ),
+  };
+}

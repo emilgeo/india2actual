@@ -42,7 +42,7 @@ export const COLUMN_PATTERNS: Array<[ColumnRole, RegExp]> = [
     /^(txn|tran|transaction|posting|post|entry|booking|trade)?d(ate|t)$/,
   ],
   ['date', /^dateoftransaction$/],
-  ['date', /^datetime$/],
+  ['date', /^date(and)?time$/],
   ['description', /(narration|particular|description|remark|detail|narrative)/],
   ['debit', /^(withdrawal|debit|dr)/],
   ['credit', /^(deposit|credit|cr)/],

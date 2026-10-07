@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Table } from './extract/types.js';
-import { interpretTable } from './interpret/rows.js';
+import { interpretSections } from './interpret/sections.js';
 import { validateBalances } from './interpret/validate.js';
 import { buildReport, maskText } from './report.js';
 
@@ -9,16 +9,24 @@ function table(rows: string[][]): Table {
   return { rows, source: { path: 'test.csv', format: 'csv' } };
 }
 
-function report(source: Table, checkName = 'Balance check'): string {
-  const result = interpretTable(source);
+function report(...sources: Table[]): string {
   return buildReport({
     version: '0.0.0',
     node: 'v0.0.0',
     format: 'CSV',
-    table: source,
-    result,
-    validation: result ? validateBalances(result.transactions) : null,
-    checkName,
+    tables: sources,
+    sections: interpretSections(sources).map((section, index) => ({
+      number: index + 1,
+      ...(section.account ? { account: section.account } : {}),
+      table: section.table,
+      result: section.result,
+      checks: [
+        {
+          name: 'Balance check',
+          validation: validateBalances(section.result.transactions),
+        },
+      ],
+    })),
   });
 }
 
@@ -72,6 +80,8 @@ describe('buildReport', () => {
 
     expect(text).toContain('india2actual 0.0.0 layout report (Node v0.0.0)');
     expect(text).toContain('File: CSV');
+    expect(text).toContain('Tables found: 1, read as transactions: 1');
+    expect(text).toContain('Section 1');
     expect(text).toContain('Header: row 2, columns date=0');
     expect(text).toContain(
       'Header cells: Date | Narration | Withdrawal Amt. | Deposit Amt. | Closing Balance',
@@ -132,6 +142,30 @@ describe('buildReport', () => {
     expect(text).toContain('  Date | Narration');
     expect(text).toContain('  99/99/9999 | xx xxxx');
     expect(text).not.toContain('ACME');
+  });
+
+  it('writes out heading words but masks the rest of a row', () => {
+    const text = report(
+      table([['Date and Time', 'Details', 'Nothing', 'Else']]),
+    );
+
+    expect(text).toContain('  Date and Time | Details | xxxxxxx | xxxx');
+  });
+
+  it('reports each account on its own and never prints the account number', () => {
+    const other = (account: string): Table => ({
+      ...table(ROWS.map(row => [...row])),
+      account,
+    });
+
+    const text = report(other('1111'), other('2222'));
+
+    expect(text).toContain('Tables found: 2, read as transactions: 2');
+    expect(text).toContain('Section 1');
+    expect(text).toContain('Section 2');
+    expect(text).toContain('Account number found near the title: yes');
+    expect(text).not.toContain('1111');
+    expect(text).not.toContain('2222');
   });
 
   it('still describes the file when no table is found', () => {

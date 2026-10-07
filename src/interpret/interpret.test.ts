@@ -5,7 +5,11 @@ import type { Table } from '../extract/types.js';
 import { findHeader } from './header.js';
 import { interpretTable } from './rows.js';
 import type { StatementTransaction } from './rows.js';
-import { validateBalances, validateCardTotals } from './validate.js';
+import {
+  validateBalances,
+  validateCardTotals,
+  validateSectionTotals,
+} from './validate.js';
 import { roleForHeader } from './synonyms.js';
 import { parseAmount, parseStatementDate } from './values.js';
 
@@ -509,5 +513,69 @@ describe('credit card markers used by other issuers', () => {
 
   it('recognises a combined date and time header', () => {
     expect(roleForHeader('Date & Time')).toBe('date');
+    expect(roleForHeader('Date and Time')).toBe('date');
+  });
+});
+
+describe('validateSectionTotals', () => {
+  const row = (
+    amount: number,
+    balance: number,
+  ): StatementTransaction => ({
+    date: '2025-03-13',
+    amount,
+    payee: 'ACME',
+    raw: 'ACME',
+    kind: 'other',
+    balance,
+  });
+  const rows = [row(500, 1500), row(-200, 1300)];
+
+  it('passes when deposits, withdrawals and closing balance agree', () => {
+    const result = validateSectionTotals(rows, [
+      { label: 'Total DEPOSITS', value: '500.00' },
+      { label: 'Total WITHDRAWALS', value: '200.00' },
+      { label: 'Total BALANCE', value: '1,300.00' },
+    ]);
+
+    expect(result).toMatchObject({ status: 'passed', checked: 3, matched: 3 });
+  });
+
+  it('fails when a printed total disagrees with the rows', () => {
+    const result = validateSectionTotals(rows, [
+      { label: 'Total DEPOSITS', value: '600.00' },
+    ]);
+
+    expect(result.status).toBe('failed');
+    expect(result.issues[0]).toContain('Deposits');
+  });
+
+  it('is skipped when the table prints no totals', () => {
+    expect(validateSectionTotals(rows, []).status).toBe('skipped');
+  });
+
+  it('checks a single row against the printed opening balance', () => {
+    const only = [row(-725, 9275)];
+
+    expect(
+      validateSectionTotals(only, [
+        { label: 'Opening Balance', value: '10,000.00 CR' },
+      ]).status,
+    ).toBe('passed');
+    expect(
+      validateSectionTotals(only, [
+        { label: 'Opening Balance', value: '9,000.00 CR' },
+      ]).status,
+    ).toBe('failed');
+  });
+
+  it('accepts a closing balance on either end, for newest-first statements', () => {
+    const newestFirst = [row(-200, 1300), row(500, 1500)];
+
+    expect(
+      validateSectionTotals(newestFirst, [
+        { label: 'Closing Balance', value: '1,300.00' },
+      ]).status,
+    ).toBe('passed');
   });
 });

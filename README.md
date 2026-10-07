@@ -230,6 +230,40 @@ second transaction.
 
 Tested against Actual 26.9.
 
+## Statements with several accounts
+
+Some banks now email one monthly PDF that covers all of your accounts. The tool
+reads each account on its own, because each has its own running balance and its
+own place in Actual.
+
+```bash
+npx india2actual consolidated.pdf
+```
+
+You get one CSV per account, named with the last four digits of the account
+number, for example `consolidated.1234.actual.csv`. Import each one into the
+matching account in Actual. The tool lists which file is which:
+
+```
+Found 2 accounts in this statement:
+  1. account ending 1234: 8 transaction(s)
+  2. account ending 5678: 3 transaction(s)
+```
+
+Each account gets its own balance check, and a second check against the totals
+its table prints, when it prints any. An account with no transactions that
+month is left out.
+
+To handle just one account, pick it by its number in that list:
+
+```bash
+npx india2actual consolidated.pdf --section 2
+```
+
+`--push` sends to one Actual account at a time, so it needs `--section`. For
+three accounts, run it three times with a different `--section` and `--account`.
+This is PDF only for now.
+
 ## Help test your bank
 
 This tool needs help from you to test statements from unverified banks. The tool runs on your own computer and uploads nothing.
@@ -275,10 +309,10 @@ bank that is already tested is useful too.
 
 | Bank                                                              | Account     | Formats                                     | Status     |
 | ----------------------------------------------------------------- | ----------- | ------------------------------------------- | ---------- |
-| ICICI                                                             | Savings     | PDF                                         | Tested     |
+| ICICI                                                             | Savings     | PDF, including the monthly all-accounts PDF | Tested     |
 | ICICI                                                             | Credit card | PDF (annual and monthly Amazon Pay layouts) | Tested     |
 | Federal Bank                                                      | Savings     | PDF                                         | Tested     |
-| IDFC FIRST Bank                                                   | Savings     | Excel                                       | Tested     |
+| IDFC FIRST Bank                                                   | Savings     | Excel, and the monthly all-accounts PDF     | Tested     |
 | CSB Bank                                                          | Savings     | CSV                                         | Tested     |
 | HDFC                                                              | Savings     | CSV, Excel                                  | Unverified |
 | SBI, Axis, Kotak, PNB, Bank of Baroda, Canara, IndusInd, Yes Bank | Savings     | CSV, Excel, PDF                             | Unverified |
@@ -305,6 +339,7 @@ real statement.
 | `--account <name\|id>`       | Which Actual account to import into. Required with `--push`.                                                |
 | `--dry-run`                  | With `--push`, report what would change without writing.                                                    |
 | `--transfer-to <account>`    | With `--push`, send card payments as transfers with this account. See [above](#card-payments-as-transfers). |
+| `--section <n>`              | For a statement with several accounts, handle only the nth. Required with `--push`. See [above](#statements-with-several-accounts). |
 | `--force`                    | Write even if the balance check fails.                                                                      |
 | `--quiet`                    | Only report problems.                                                                                       |
 | `--debug-layout`             | Print a report on how the file was read, safe to paste into an issue, and write nothing.                    |

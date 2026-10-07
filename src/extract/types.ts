@@ -19,6 +19,16 @@ export type Table = {
   preamble?: string[];
   /** Labelled amounts above the table, such as a card statement's summary. */
   figures?: Figure[];
+  /**
+   * Amounts printed inside the table itself: opening and closing balance rows
+   * and column totals, labelled by the row and column that carry them.
+   */
+  totals?: Figure[];
+  /**
+   * Last four digits of the account number printed with this table. Set when a
+   * statement holds several accounts, so that each can be told apart.
+   */
+  account?: string;
   source: {
     path: string;
     format: SourceFormat;

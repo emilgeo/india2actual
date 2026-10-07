@@ -17,16 +17,17 @@ export type ExtractOptions = {
 };
 
 export type Extraction = {
-  table: Table;
+  /** One table per account. Only a PDF can hold more than one. */
+  tables: Table[];
   /** What the file turned out to be, which is often not what it is named. */
   format: DetectedFormat;
 };
 
 /**
- * Read a statement file into a table, choosing the parser by inspecting the
+ * Read a statement file into its tables, choosing the parser by inspecting the
  * contents rather than the extension.
  */
-export async function extractTable(
+export async function extractTables(
   path: string,
   options: ExtractOptions = {},
 ): Promise<Extraction> {
@@ -35,14 +36,14 @@ export async function extractTable(
 
   switch (format) {
     case 'xlsx':
-      return { table: await extractXlsx(path), format };
+      return { tables: [await extractXlsx(path)], format };
     case 'html':
-      return { table: await extractHtmlTable(path), format };
+      return { tables: [await extractHtmlTable(path)], format };
     case 'spreadsheetml':
-      return { table: await extractSpreadsheetMl(path), format };
+      return { tables: [await extractSpreadsheetMl(path)], format };
     case 'pdf':
       return {
-        table: await extractPdf(
+        tables: await extractPdf(
           path,
           options.password ? { password: options.password } : {},
         ),
@@ -61,10 +62,12 @@ export async function extractTable(
     case 'text':
     default:
       return {
-        table: await extractCsv(
-          path,
-          options.delimiter ? { delimiter: options.delimiter } : {},
-        ),
+        tables: [
+          await extractCsv(
+            path,
+            options.delimiter ? { delimiter: options.delimiter } : {},
+          ),
+        ],
         format: 'text',
       };
   }

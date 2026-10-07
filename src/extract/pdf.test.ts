@@ -1,8 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import { interpretTable } from '../interpret/rows.js';
+import { interpretSections } from '../interpret/sections.js';
+import {
+  validateBalances,
+  validateSectionTotals,
+} from '../interpret/validate.js';
 
-import { assembleRows, inferBands, readFigures, trimToTable } from './pdf.js';
+import {
+  assembleRows,
+  inferBands,
+  readFigures,
+  splitSections,
+  tablesFromLines,
+  trimToTable,
+} from './pdf.js';
 import type { Item, Line } from './pdf.js';
 
 /**
@@ -472,5 +484,305 @@ describe('readFigures', () => {
 
   it('ignores an amount with no label close above it', () => {
     expect(readFigures([line(100, [[99, 'Total']]), line(40, [[99, '9.00']])])).toEqual([]);
+  });
+});
+
+const SOURCE = { path: 'test.pdf', format: 'pdf' as const };
+
+/**
+ * Two accounts printed one after the other, then a page whose tax summary has
+ * a dated row of its own. Shaped like a consolidated monthly statement.
+ */
+function consolidatedLines(): Line[] {
+  const row = (y: number, cells: Array<[number, string]>, page = 1) =>
+    line(y, cells, page, 4);
+
+  const header = (y: number) =>
+    row(y, [
+      [37, 'DATE'],
+      [81, 'MODE'],
+      [141, 'PARTICULARS'],
+      [371, 'DEPOSITS'],
+      [428, 'WITHDRAWALS'],
+      [524, 'BALANCE'],
+    ]);
+
+  return [
+    row(750, [[34, 'Summary of accounts held with the bank']]),
+    row(442, [
+      [34, 'Statement of transactions in Savings Account XXXXXXXX1111 in INR'],
+    ]),
+    header(419),
+    row(405, [
+      [35, '12-03-2025'],
+      [141, 'B/F'],
+      [538, '1,000.00'],
+    ]),
+    row(391, [
+      [35, '13-03-2025'],
+      [81, 'BY CASH'],
+      [141, 'CASH DEPOSIT'],
+      [376, '500.00'],
+      [528, '1,500.00'],
+    ]),
+    row(377, [
+      [35, '14-03-2025'],
+      [141, 'UPI/ACME STORE PUNE'],
+      [456, '200.00'],
+      [528, '1,300.00'],
+    ]),
+    row(363, [
+      [141, 'Total:'],
+      [369, '500.00'],
+      [455, '200.00'],
+      [527, '1,300.00'],
+    ]),
+    row(340, [
+      [34, 'Statement of transactions in Savings Account XXXXXXXX2222 in INR'],
+    ]),
+    header(317),
+    row(303, [
+      [35, '12-03-2025'],
+      [141, 'B/F'],
+      [538, '2,000.00'],
+    ]),
+    row(289, [
+      [35, '15-03-2025'],
+      [141, 'NEFT FROM ACME CONSULTING'],
+      [376, '100.00'],
+      [528, '2,100.00'],
+    ]),
+    row(275, [
+      [141, 'Total:'],
+      [369, '100.00'],
+      [527, '2,100.00'],
+    ]),
+    row(740, [[34, 'Summary of interest and tax']], 2),
+    row(
+      700,
+      [
+        [37, '100000000001'],
+        [111, '31-03-2025'],
+        [202, '12.00'],
+        [277, '1.00'],
+      ],
+      2,
+    ),
+    row(
+      686,
+      [
+        [37, 'Closing Balance (Cumulative)'],
+        [202, '12.00'],
+      ],
+      2,
+    ),
+  ];
+}
+
+/**
+ * One account whose block starts with a summary that reads like a header, a
+ * two-line header, and an opening balance row, as an IDFC-style statement
+ * lays it out.
+ */
+function summaryFirstLines(): Line[] {
+  const row = (y: number, cells: Array<[number, string]>, page = 1) =>
+    line(y, cells, page, 3.2);
+
+  return [
+    row(803, [[163, 'ACME BANK STATEMENT']]),
+    row(315, [[53, 'SAVINGS ACCOUNT DETAILS FOR A/c : 10001234567']]),
+    row(305, [
+      [73, 'Opening Balance'],
+      [169, 'Number of'],
+      [227, 'Number of Deposits'],
+      [314, 'Withdrawals'],
+      [390, 'Deposits'],
+      [460, 'Closing Balance'],
+    ]),
+    row(295, [
+      [95, '(INR)'],
+      [166, 'Withdrawals'],
+      [327, '(INR)'],
+      [397, '(INR)'],
+      [480, '(INR)'],
+    ]),
+    row(283, [
+      [84, '10,000.00 CR'],
+      [183, '1'],
+      [258, '1'],
+      [323, '725.00'],
+      [400, '430.00'],
+      [474, '9,705.00 CR'],
+    ]),
+    row(262, [
+      [57, 'Date and Time'],
+      [120, 'Value Date'],
+      [189, 'Transaction Details'],
+      [286, 'Cheque/Ref'],
+      [342, 'Withdrawals'],
+      [409, 'Deposits'],
+      [481, 'Balance'],
+    ]),
+    row(252, [
+      [302, 'No.'],
+      [356, '(INR)'],
+      [417, '(INR)'],
+      [487, '(INR)'],
+    ]),
+    row(240, [
+      [169, 'Opening Balance'],
+      [487, '10,000.00 CR'],
+    ]),
+    row(229, [[169, 'UPI-ACME STORE PUNE-swiggy@ybl-412345678901-NA']]),
+    row(224, [
+      [57, '12 Mar 25 10:15'],
+      [123, '12 Mar 25'],
+      [361, '725.00'],
+      [497, '9,275.00 CR'],
+    ]),
+    row(219, [[169, 'ACME/STORE/412345678901']]),
+    row(205, [
+      [57, '13 Mar 25 11:20'],
+      [123, '13 Mar 25'],
+      [169, 'NEFT-ACME CONSULTING'],
+      [420, '430.00'],
+      [497, '9,705.00 CR'],
+    ]),
+  ];
+}
+
+describe('splitSections', () => {
+  it('starts a section at each header that is followed by dated rows', () => {
+    const sections = splitSections(consolidatedLines());
+
+    expect(sections.map(section => section.account)).toEqual(['1111', '2222']);
+  });
+
+  it('drops a dated line that is not under the date column', () => {
+    const text = splitSections(consolidatedLines())
+      .flatMap(section => section.lines)
+      .flatMap(item => item.items.map(entry => entry.text));
+
+    expect(text).not.toContain('100000000001');
+    expect(text).toContain('UPI/ACME STORE PUNE');
+  });
+
+  it('does not take a summary that reads like a header for the table header', () => {
+    const sections = splitSections(summaryFirstLines());
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.account).toBe('4567');
+    const first = sections[0]?.lines[0]?.items.map(entry => entry.text);
+    expect(first).toContain('Date and Time');
+  });
+
+  it('finds nothing in text without a header and dated rows', () => {
+    expect(splitSections([line(700, [[34, 'A note with no table']])])).toEqual(
+      [],
+    );
+  });
+});
+
+describe('tablesFromLines on a consolidated statement', () => {
+  const tables = () => tablesFromLines(consolidatedLines(), SOURCE);
+
+  it('keeps each account in its own table with its own columns', () => {
+    expect(tables()).toHaveLength(2);
+    expect(tables()[0]?.rows[0]).toEqual([
+      'DATE',
+      'MODE',
+      'PARTICULARS',
+      'DEPOSITS',
+      'WITHDRAWALS',
+      'BALANCE',
+    ]);
+  });
+
+  it('reads the totals row, labelled by column', () => {
+    expect(tables()[0]?.totals).toEqual([
+      { label: 'Total DEPOSITS', value: '500.00' },
+      { label: 'Total WITHDRAWALS', value: '200.00' },
+      { label: 'Total BALANCE', value: '1,300.00' },
+    ]);
+  });
+
+  it('reads both accounts and agrees with their printed totals', () => {
+    const sections = interpretSections(tables());
+
+    expect(sections.map(section => section.result.transactions.length)).toEqual(
+      [2, 1],
+    );
+    for (const section of sections) {
+      expect(validateSectionTotals(section.result.transactions, section.table.totals).status).toBe('passed');
+    }
+    expect(validateBalances(sections[0]?.result.transactions ?? []).status).toBe(
+      'passed',
+    );
+  });
+
+  it('keeps the notice with a date out of the second account', () => {
+    const second = tables()[1];
+
+    expect(second?.rows.flat().join(' ')).not.toContain('100000000001');
+  });
+});
+
+describe('tablesFromLines on a summary-first statement', () => {
+  const tables = () => tablesFromLines(summaryFirstLines(), SOURCE);
+
+  it('recognises a Date and Time header and reads the opening balance row', () => {
+    expect(tables()).toHaveLength(1);
+    expect(tables()[0]?.rows[0]).toContain('Date and Time');
+    expect(tables()[0]?.totals).toEqual([
+      { label: 'Opening Balance', value: '10,000.00 CR' },
+    ]);
+  });
+
+  it('reads both rows and checks opening balance plus movement', () => {
+    const [section] = interpretSections(tables());
+
+    expect(section?.result.transactions.map(row => row.amount)).toEqual([
+      -725, 430,
+    ]);
+    expect(
+      validateSectionTotals(
+        section?.result.transactions ?? [],
+        section?.table.totals,
+      ).status,
+    ).toBe('passed');
+  });
+});
+
+describe('tablesFromLines on one account whose header repeats', () => {
+  it('splits per page, and the sections join back into one account', () => {
+    const header = (y: number, page: number) =>
+      line(
+        y,
+        [
+          [40, 'Date'],
+          [120, 'Narration'],
+          [300, 'Debit'],
+          [370, 'Credit'],
+          [450, 'Balance'],
+        ],
+        page,
+      );
+    const lines = [
+      header(700, 1),
+      line(680, [[40, '01/04/2025'], [120, 'ACME STORE'], [300, '100.00'], [450, '900.00']]),
+      line(660, [[40, '02/04/2025'], [120, 'ACME CAFE'], [300, '50.00'], [450, '850.00']]),
+      header(700, 2),
+      line(680, [[40, '03/04/2025'], [120, 'ACME TAXI'], [300, '25.00'], [450, '825.00']], 2),
+    ];
+
+    const tables = tablesFromLines(lines, SOURCE);
+    const sections = interpretSections(tables);
+
+    expect(tables).toHaveLength(2);
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.result.transactions).toHaveLength(3);
+    expect(validateBalances(sections[0]?.result.transactions ?? []).status).toBe(
+      'passed',
+    );
   });
 });

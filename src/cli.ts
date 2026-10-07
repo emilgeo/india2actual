@@ -4,16 +4,19 @@ import { basename, dirname, extname, join } from 'node:path';
 import { argv, cwd, env, exit, stderr, stdout, versions } from 'node:process';
 
 import { loadEnvironmentFile, setting } from './env-file.js';
-import { describeFormat, extractTable } from './extract/index.js';
+import { describeFormat, extractTables } from './extract/index.js';
 import {
   interpretConvertedOutput,
   isConvertedOutput,
 } from './interpret/roundtrip.js';
-import { interpretTable } from './interpret/rows.js';
+import { interpretSections } from './interpret/sections.js';
+import type { Section } from './interpret/sections.js';
 import {
   validateBalances,
   validateCardTotals,
+  validateSectionTotals,
 } from './interpret/validate.js';
+import type { Validation } from './interpret/validate.js';
 import type { DateOrder } from './interpret/values.js';
 import { loadMerchantRules } from './merchants-file.js';
 import type { MerchantRule } from './narration/merchants.js';
@@ -41,6 +44,9 @@ Options:
                         detected from the statement itself.
   --env-file <path>     Read settings from this file instead of ./.env.
   --force               Write the CSV even if the balance check fails.
+  --section <n>         For a statement that holds several accounts, handle only
+                        the nth. Without it each account gets its own CSV.
+                        Required with --push.
   --debug-layout        Print a report on how the file was read, with all text
                         masked so it is safe to paste into an issue, and write
                         nothing.
@@ -82,6 +88,7 @@ type Options = {
   delimiter?: string;
   merchants?: string;
   card: boolean;
+  section?: number;
   debugLayout: boolean;
   force: boolean;
   quiet: boolean;
@@ -159,6 +166,14 @@ function parseArgs(args: string[]): Options | null {
       case '--transfer-to':
         options.transferTo = next();
         break;
+      case '--section': {
+        const value = Number(next());
+        if (!Number.isInteger(value) || value < 1) {
+          throw new Error('--section needs a whole number, 1 or more');
+        }
+        options.section = value;
+        break;
+      }
       case '--debug-layout':
         options.debugLayout = true;
         break;
@@ -202,10 +217,16 @@ function parseArgs(args: string[]): Options | null {
   return options;
 }
 
-function defaultOutPath(input: string): string {
+function defaultOutPath(input: string, suffix?: string): string {
   const extension = extname(input);
   const name = basename(input, extension);
-  return join(dirname(input), `${name}.actual.csv`);
+  return join(dirname(input), `${name}${suffix ? `.${suffix}` : ''}.actual.csv`);
+}
+
+function sectionLabel(section: Section, number: number): string {
+  return section.account
+    ? `account ending ${section.account}`
+    : `section ${number}`;
 }
 
 function packageVersion(): string {
@@ -260,31 +281,34 @@ async function run(args: string[]): Promise<number> {
   // history.
   const pdfPassword = setting('STATEMENT_PASSWORD');
 
-  const { table, format } = await extractTable(options.input, {
+  const { tables, format } = await extractTables(options.input, {
     ...(options.delimiter ? { delimiter: options.delimiter } : {}),
     ...(pdfPassword ? { password: pdfPassword } : {}),
   });
   log(`Read ${options.input} as ${describeFormat(format)}`);
 
+  const interpretOptions = {
+    dateOrder: options.dateOrder,
+    ...(options.card ? { card: true } : {}),
+    ...(merchantRules.length ? { merchantRules } : {}),
+  };
+
   if (options.debugLayout) {
-    const interpreted = interpretTable(table, {
-      dateOrder: options.dateOrder,
-      ...(options.card ? { card: true } : {}),
-      ...(merchantRules.length ? { merchantRules } : {}),
-    });
     stdout.write(
       buildReport({
         version: packageVersion(),
         node: versions.node,
         format: describeFormat(format),
-        table,
-        result: interpreted,
-        validation: interpreted
-          ? interpreted.card
-            ? validateCardTotals(interpreted.transactions, table.figures)
-            : validateBalances(interpreted.transactions)
-          : null,
-        checkName: interpreted?.card ? 'Statement totals check' : 'Balance check',
+        tables,
+        sections: interpretSections(tables, interpretOptions).map(
+          (section, index) => ({
+            number: index + 1,
+            ...(section.account ? { account: section.account } : {}),
+            table: section.table,
+            result: section.result,
+            checks: checksFor(section),
+          }),
+        ),
       }),
     );
     return 0;
@@ -292,7 +316,8 @@ async function run(args: string[]): Promise<number> {
 
   // Our own output is passed through rather than re-parsed, so that payees
   // corrected by hand in the CSV survive.
-  const converted = isConvertedOutput(table);
+  const [only] = tables;
+  const converted = tables.length === 1 && only && isConvertedOutput(only);
   if (converted) {
     log(
       'Recognised this as already-converted output: payees kept as-is, ' +
@@ -300,15 +325,12 @@ async function run(args: string[]): Promise<number> {
     );
   }
 
-  const result = converted
-    ? interpretConvertedOutput(table)
-    : interpretTable(table, {
-        dateOrder: options.dateOrder,
-        ...(options.card ? { card: true } : {}),
-        ...(merchantRules.length ? { merchantRules } : {}),
-      });
+  const sections: Section[] =
+    converted && only
+      ? [{ table: only, result: interpretConvertedOutput(only) }]
+      : interpretSections(tables, interpretOptions);
 
-  if (!result) {
+  if (!sections.length) {
     stderr.write(
       'Could not find a transaction table in this file.\n' +
         'Expected columns resembling: Date, Narration/Particulars, ' +
@@ -317,7 +339,120 @@ async function run(args: string[]): Promise<number> {
     return 1;
   }
 
-  const { transactions, skipped, header, droppedRefs, card } = result;
+  const several = sections.length > 1;
+  if (several) {
+    log(`Found ${sections.length} accounts in this statement:`);
+    for (const [index, section] of sections.entries()) {
+      log(
+        `  ${index + 1}. ${sectionLabel(section, index + 1)}: ` +
+          `${section.result.transactions.length} transaction(s)`,
+      );
+    }
+  }
+
+  let chosen = sections.map((section, index) => ({ section, number: index + 1 }));
+  if (options.section !== undefined) {
+    const picked = chosen[options.section - 1];
+    if (!picked) {
+      stderr.write(
+        `--section ${options.section} does not exist: this statement has ` +
+          `${sections.length} account(s).\n`,
+      );
+      return 1;
+    }
+    chosen = [picked];
+  } else if (several) {
+    // One Actual account takes one section, and a single file name cannot
+    // hold several.
+    const reason = pushConfig
+      ? '--push sends to one Actual account'
+      : options.useStdout
+        ? '--stdout prints one CSV'
+        : options.out
+          ? '--out names one file'
+          : null;
+    if (reason) {
+      stderr.write(
+        `This statement holds ${sections.length} accounts and ${reason}. ` +
+          'Choose one with --section <n>.\n',
+      );
+      return 1;
+    }
+  }
+
+  let exitCode = 0;
+  for (const { section, number } of chosen) {
+    const prefix = several ? `${sectionLabel(section, number)}: ` : '';
+    const code = await handleSection(section, {
+      options,
+      pushConfig,
+      converted: Boolean(converted),
+      prefix,
+      required: !several || options.section !== undefined,
+      outPath:
+        options.out ??
+        defaultOutPath(
+          options.input,
+          several ? (section.account ?? `section${number}`) : undefined,
+        ),
+    });
+    exitCode = Math.max(exitCode, code);
+  }
+
+  return exitCode;
+}
+
+/** The independent checks that apply to a section, in the order they run. */
+function checksFor(
+  section: Section,
+): Array<{ name: string; unit: string; validation: Validation }> {
+  const { transactions, card } = section.result;
+  const checks = [
+    {
+      name: card ? 'Statement totals check' : 'Balance check',
+      unit: card ? 'totals' : 'rows',
+      validation: card
+        ? validateCardTotals(transactions, section.table.figures)
+        : validateBalances(transactions),
+    },
+  ];
+
+  if (!card) {
+    const totals = validateSectionTotals(transactions, section.table.totals);
+    if (totals.status !== 'skipped') {
+      checks.push({
+        name: 'Printed totals check',
+        unit: 'totals',
+        validation: totals,
+      });
+    }
+  }
+
+  return checks;
+}
+
+type SectionContext = {
+  options: Options;
+  pushConfig: PushConfig | null;
+  converted: boolean;
+  /** Put before each message, to say which account it is about. */
+  prefix: string;
+  /** An account with nothing to write is an error only when it was asked for. */
+  required: boolean;
+  outPath: string;
+};
+
+async function handleSection(
+  section: Section,
+  context: SectionContext,
+): Promise<number> {
+  const { options, pushConfig, converted, prefix, required, outPath } = context;
+  const log = (message: string) => {
+    if (!options.quiet) {
+      stderr.write(`${prefix}${message}\n`);
+    }
+  };
+  const { transactions, skipped, header, droppedRefs, card } = section.result;
 
   if (card) {
     log(
@@ -343,50 +478,48 @@ async function run(args: string[]): Promise<number> {
   }
 
   if (!transactions.length) {
-    stderr.write('No transactions were parsed, nothing to write.\n');
-    return 1;
+    stderr.write(`${prefix}No transactions were parsed, nothing to write.\n`);
+    return required ? 1 : 0;
   }
 
   // The balance column, or a card's printed totals, is the only independent
   // check that the parse is right, so a failure blocks the write unless
   // explicitly overridden.
-  const validation = card
-    ? validateCardTotals(transactions, table.figures)
-    : validateBalances(transactions);
-  const checkName = card ? 'Statement totals check' : 'Balance check';
-  const unit = card ? 'totals' : 'rows';
+  for (const [position, check] of checksFor(section).entries()) {
+    const { name: checkName, unit, validation } = check;
 
-  if (validation.status === 'failed') {
-    stderr.write(
-      `${checkName} FAILED (${validation.matched}/${validation.checked} ${unit} agree).\n`,
-    );
-    for (const issue of validation.issues) {
-      stderr.write(`  ${issue}\n`);
-    }
-    if (!options.force) {
+    if (validation.status === 'failed') {
       stderr.write(
-        'Refusing to write a statement that does not reconcile. ' +
-          'Re-run with --force to write it anyway.\n',
+        `${prefix}${checkName} FAILED (${validation.matched}/${validation.checked} ${unit} agree).\n`,
       );
-      return 2;
-    }
-    stderr.write('Writing anyway because --force was given.\n');
-  } else if (validation.status === 'passed') {
-    log(
-      `${checkName} passed (${validation.matched}/${validation.checked} ${unit}` +
-        `${validation.order ? `, ${validation.order} order` : ''}).`,
-    );
-  } else {
-    log(`${checkName} skipped: ${validation.issues[0] ?? 'no balance data'}`);
-    if (converted) {
-      // Said plainly, because it is the one real cost of the round trip: the
-      // CSV carries no balance column, so these amounts are not independently
-      // verified here. They were when the CSV was produced.
+      for (const issue of validation.issues) {
+        stderr.write(`${prefix}  ${issue}\n`);
+      }
+      if (!options.force) {
+        stderr.write(
+          `${prefix}Refusing to write a statement that does not reconcile. ` +
+            'Re-run with --force to write it anyway.\n',
+        );
+        return 2;
+      }
+      stderr.write(`${prefix}Writing anyway because --force was given.\n`);
+    } else if (validation.status === 'passed') {
       log(
-        'Converted output carries no balance column, so this run cannot ' +
-          're-verify the amounts. Check the balance line from the run that ' +
-          'produced this CSV.',
+        `${checkName} passed (${validation.matched}/${validation.checked} ${unit}` +
+          `${validation.order ? `, ${validation.order} order` : ''}).`,
       );
+    } else {
+      log(`${checkName} skipped: ${validation.issues[0] ?? 'no balance data'}`);
+      if (converted && position === 0) {
+        // Said plainly, because it is the one real cost of the round trip: the
+        // CSV carries no balance column, so these amounts are not independently
+        // verified here. They were when the CSV was produced.
+        log(
+          'Converted output carries no balance column, so this run cannot ' +
+            're-verify the amounts. Check the balance line from the run that ' +
+            'produced this CSV.',
+        );
+      }
     }
   }
 
@@ -428,7 +561,6 @@ async function run(args: string[]): Promise<number> {
     return 0;
   }
 
-  const outPath = options.out ?? defaultOutPath(options.input);
   await writeCsv(outPath, transactions);
   log(`Wrote ${outPath}`);
 

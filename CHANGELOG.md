@@ -12,6 +12,19 @@ All notable changes to this project are recorded here. The format follows
 - `--debug-layout` prints a report on how a statement was read (detected
   columns, row and transaction counts, balance check result) with all text
   masked, so it can be pasted into a bug report without sharing the statement.
+- Statements that cover several accounts, such as the monthly all-accounts
+  PDFs from ICICI and IDFC FIRST, are read one account at a time. Each account
+  gets its own CSV, named with the last four digits of the account number, and
+  its own checks. `--section <n>` picks one account, and `--push` needs it.
+- Each account is also checked against the totals its table prints (deposits,
+  withdrawals, closing balance, or opening balance plus movement), where the
+  statement prints them.
+
+### Fixed
+
+- A dated line outside the transaction table of a PDF, such as a tax summary,
+  no longer merges the table's columns.
+- A `Date and Time` heading is recognised as the date column.
 
 ## 0.3.0 - 2026-10-05
 
