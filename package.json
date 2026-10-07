@@ -44,7 +44,7 @@
   },
   "dependencies": {
     "csv-parse": "^7.0.2",
-    "csv-stringify": "^6.5.0",
+    "csv-stringify": "^6.9.0",
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^5.11.1",
     "node-html-parser": "^9.0.4",
