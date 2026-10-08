@@ -4,10 +4,15 @@ import { safeStorage } from '../dom.js';
 import { requestHostAccess } from '../extension/follow.js';
 
 import { checkServerAddress } from './address.js';
+import { SignInExpired } from './auth.js';
+import { currentVault } from './credentials.js';
 import { connect, disconnect, versionsMatch } from './session.js';
 import type { Connection } from './types.js';
 
 const SAVED = 'india2actual.connection.v1';
+
+/** Only in the extension; null elsewhere, so a page never keeps a secret. */
+const vault = currentVault();
 
 type Props = {
   connection: Connection | null;
@@ -26,12 +31,19 @@ function savedAddress(): { serverURL: string; syncId: string } {
 
 /** Where to enter the server details and open the budget. */
 export function ConnectPanel({ connection, onConnected, onDisconnected }: Props) {
+  const [saved, setSaved] = useState(() => vault?.load() ?? null);
   const [form, setForm] = useState({
     ...savedAddress(),
+    ...(saved ? { serverURL: saved.serverURL, syncId: saved.syncId } : {}),
     password: '',
     encryptionPassword: '',
   });
+  const [stay, setStay] = useState(Boolean(saved));
   const [remember, setRemember] = useState(true);
+
+  // The saved token belongs to one server, so only use it while the address matches.
+  const usable =
+    saved !== null && checkServerAddress(form.serverURL).url === saved.serverURL;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,7 +63,24 @@ export function ConnectPanel({ connection, onConnected, onDisconnected }: Props)
           await requestHostAccess(new URL(checked.url).origin);
         }
       }
-      const opened = await connect(form);
+      const opened = await connect({
+        ...form,
+        ...(usable && !form.password && saved ? { token: saved.token } : {}),
+      });
+      if (vault) {
+        if (stay) {
+          const entry = {
+            serverURL: opened.serverURL,
+            syncId: opened.syncId,
+            token: opened.token,
+          };
+          vault.save(entry);
+          setSaved(entry);
+        } else {
+          vault.forget();
+          setSaved(null);
+        }
+      }
       if (remember) {
         try {
           safeStorage()?.setItem(
@@ -65,6 +94,11 @@ export function ConnectPanel({ connection, onConnected, onDisconnected }: Props)
       setForm({ ...form, password: '', encryptionPassword: '' });
       onConnected(opened);
     } catch (problem) {
+      if (problem instanceof SignInExpired) {
+        vault?.forget();
+        setSaved(null);
+        setStay(false);
+      }
       setError(problem instanceof Error ? problem.message : String(problem));
     } finally {
       setBusy(false);
@@ -123,7 +157,13 @@ export function ConnectPanel({ connection, onConnected, onDisconnected }: Props)
         </label>
         <label>
           Server password
-          <input type="password" autoComplete="off" value={form.password} onInput={set('password')} />
+          <input
+            type="password"
+            autoComplete="off"
+            value={form.password}
+            placeholder={usable ? 'Not needed, using your saved sign-in' : ''}
+            onInput={set('password')}
+          />
         </label>
         <label>
           Sync ID
@@ -152,11 +192,43 @@ export function ConnectPanel({ connection, onConnected, onDisconnected }: Props)
         />
         Remember the address and Sync ID in this browser (never the passwords)
       </label>
+      {vault ? (
+        <label class="check">
+          <input
+            type="checkbox"
+            checked={stay}
+            onChange={event => setStay((event.currentTarget as HTMLInputElement).checked)}
+          />
+          Stay connected on this device (keeps a sign-in token in this extension,
+          not your password)
+        </label>
+      ) : null}
+      {usable ? (
+        <p class="muted">Signed in earlier. Press Connect to use that sign-in.</p>
+      ) : null}
       {error ? <p class="notice error">{error}</p> : null}
       <div class="row">
-        <button type="submit" class="button primary" disabled={busy || !form.password}>
+        <button
+          type="submit"
+          class="button primary"
+          disabled={busy || (!form.password && !usable)}
+        >
           {busy ? 'Connecting...' : 'Connect'}
         </button>
+        {saved ? (
+          <button
+            type="button"
+            class="button"
+            disabled={busy}
+            onClick={() => {
+              vault?.forget();
+              setSaved(null);
+              setStay(false);
+            }}
+          >
+            Forget saved sign-in
+          </button>
+        ) : null}
       </div>
     </form>
   );

@@ -156,4 +156,83 @@ test.describe('the side panel extension', () => {
 
     await expect(panel.locator('article.card').first().getByLabel('Import into', { exact: true })).toHaveValue('');
   });
+
+  test.describe('staying connected', () => {
+    const KEY = 'india2actual.signin.v1';
+    const stored = () =>
+      panel.evaluate(key => window.localStorage.getItem(key), KEY);
+
+    async function signIn(stay: boolean) {
+      await panel.getByLabel('Server address').fill(server.url);
+      await panel.getByLabel('Server password').fill(server.password);
+      await panel.getByLabel('Sync ID', { exact: true }).fill(budget.syncId);
+      if (stay) {
+        await panel.getByLabel(/Stay connected on this device/).check();
+      }
+      await panel.getByRole('button', { name: 'Connect' }).click();
+      await expect(panel.getByText(/^Connected to/)).toBeVisible({ timeout: 30_000 });
+    }
+
+    test('keeps a token, never the password, and reconnects in one click', async () => {
+      await signIn(true);
+
+      const everything = await panel.evaluate(() =>
+        JSON.stringify(Object.fromEntries(Object.entries(window.localStorage))),
+      );
+      expect(await stored()).toContain('"token"');
+      expect(everything).not.toContain(server.password);
+
+      await panel.reload();
+      await expect(panel.getByText('Signed in earlier. Press Connect to use that sign-in.')).toBeVisible();
+      await expect(panel.getByLabel('Server address')).toHaveValue(server.url);
+      await panel.getByRole('button', { name: 'Connect' }).click();
+      await expect(panel.getByText(/^Connected to/)).toBeVisible({ timeout: 30_000 });
+    });
+
+    test('pushes with the saved sign-in', async () => {
+      await signIn(true);
+      await panel.reload();
+      await panel.getByRole('button', { name: 'Connect' }).click();
+      await expect(panel.getByText(/^Connected to/)).toBeVisible({ timeout: 30_000 });
+
+      await upload(panel, file('statement.csv', CSV));
+      await panel.getByLabel('Import into', { exact: true }).selectOption({ label: 'Acme Savings' });
+      await panel.getByRole('button', { name: /^Push 2 rows/ }).click();
+
+      await expect(panel.getByText('Imported into Acme Savings: 2 new')).toBeVisible();
+    });
+
+    test('saves nothing unless asked', async () => {
+      await signIn(false);
+
+      expect(await stored()).toBeNull();
+      await panel.reload();
+      await expect(panel.getByRole('button', { name: 'Connect' })).toBeDisabled();
+    });
+
+    test('forgets the saved sign-in on request', async () => {
+      await signIn(true);
+      await panel.reload();
+
+      await panel.getByRole('button', { name: 'Forget saved sign-in' }).click();
+
+      expect(await stored()).toBeNull();
+      await expect(panel.getByRole('button', { name: 'Connect' })).toBeDisabled();
+    });
+
+    test('asks for the password again when the saved sign-in stops working', async () => {
+      await signIn(true);
+      await panel.evaluate(key => {
+        const saved = JSON.parse(window.localStorage.getItem(key) ?? '{}');
+        window.localStorage.setItem(key, JSON.stringify({ ...saved, token: 'no-longer-valid' }));
+      }, KEY);
+      await panel.reload();
+
+      await panel.getByRole('button', { name: 'Connect' }).click();
+
+      await expect(panel.locator('.notice.error')).toContainText('no longer works');
+      expect(await stored()).toBeNull();
+      await expect(panel.getByRole('button', { name: 'Connect' })).toBeDisabled();
+    });
+  });
 });

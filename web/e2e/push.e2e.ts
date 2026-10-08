@@ -91,6 +91,16 @@ test.describe('the push file', () => {
     expect(outcome).toBe('blocked');
   });
 
+  test('keeps no sign-in, since a page opened from disk is no place for a secret', async ({ page }) => {
+    await expect(page.getByLabel(/Stay connected/)).toHaveCount(0);
+    await tryConnect(page);
+    await expect(page.getByText(/^Connected to/)).toBeVisible({ timeout: 30_000 });
+
+    expect(
+      await page.evaluate(() => window.localStorage.getItem('india2actual.signin.v1')),
+    ).toBeNull();
+  });
+
   test('refuses an http address that is not on this computer', async ({ page }) => {
     await page.getByLabel('Server address').fill('http://192.168.1.20:5006');
     await page.getByLabel('Server password').fill('anything');

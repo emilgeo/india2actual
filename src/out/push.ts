@@ -261,6 +261,12 @@ export function resolveAccount(
 /** Opens a connection to Actual and returns the API, ready to use. */
 export type ActualConnector = (config: PushConfig) => Promise<ActualApi>;
 
+/** The parts of the API a push uses once a budget is open. */
+export type PushApi = Pick<
+  ActualApi,
+  'getAccounts' | 'getPayees' | 'getTransactions' | 'importTransactions'
+>;
+
 /** What a push needs once a budget is open. */
 export type PushOptions = Pick<PushConfig, 'account' | 'dryRun' | 'transferTo'>;
 
@@ -269,7 +275,7 @@ export type PushOptions = Pick<PushConfig, 'account' | 'dryRun' | 'transferTo'>;
  * down here, so a session can preview, import and check balances in turn.
  */
 export async function pushWithApi(
-  api: ActualApi,
+  api: PushApi,
   transactions: StatementTransaction[],
   config: PushOptions,
 ): Promise<PushResult> {

@@ -1,4 +1,5 @@
 import { describeConnectionError, checkServerAddress } from './address.js';
+import { isTokenRefused, signIn, SignInExpired } from './auth.js';
 import { loadApi } from './load-api.js';
 import type { Connection, WebApi } from './types.js';
 
@@ -7,6 +8,8 @@ export type ConnectForm = {
   password: string;
   syncId: string;
   encryptionPassword: string;
+  /** A saved session token, used instead of the password when given. */
+  token?: string;
 };
 
 /** Open the budget and read what the page needs to offer choices. */
@@ -20,15 +23,27 @@ export async function connect(form: ConnectForm): Promise<Connection> {
     throw new Error('Enter the Sync ID, under Settings, Show advanced settings.');
   }
 
+  let token = form.token;
+  if (!token) {
+    try {
+      token = await signIn(checked.url, form.password);
+    } catch (error) {
+      throw new Error(describeConnectionError(error));
+    }
+  }
+
   const api = (await loadApi()) as unknown as WebApi;
   try {
-    await api.init({ serverURL: checked.url, password: form.password });
+    await api.init({ serverURL: checked.url, sessionToken: token });
     await api.downloadBudget(
       syncId,
       form.encryptionPassword ? { password: form.encryptionPassword } : undefined,
     );
   } catch (error) {
     await api.shutdown().catch(() => undefined);
+    if (form.token && isTokenRefused(error)) {
+      throw new SignInExpired();
+    }
     throw new Error(describeConnectionError(error));
   }
 
@@ -37,6 +52,8 @@ export async function connect(form: ConnectForm): Promise<Connection> {
   return {
     api,
     serverOrigin: new URL(checked.url).origin,
+    serverURL: checked.url,
+    token,
     syncId,
     budgetName: budgets.find(budget => budget.groupId === syncId)?.name ?? 'your budget',
     serverVersion: 'version' in version ? version.version : null,

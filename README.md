@@ -111,6 +111,16 @@ drop in. Each release has `India2Actual-extension.zip`. It is not in the Chrome
 Web Store, so unzip it, open `chrome://extensions`, turn on Developer mode,
 choose Load unpacked and pick the folder, then click the toolbar icon.
 
+To avoid typing the server password each time, tick Stay connected on this
+device. The extension then keeps a sign-in token, never the password, and next
+time you press Connect with the password box empty. Forget saved sign-in deletes
+it, and if the server stops accepting the token the panel asks for the password
+again. This uses a sign-in that Actual's own app uses but does not document, so
+a future Actual release could change it. In the version this was built against,
+a token does not expire unless the server is set to expire it, and it sits in the
+extension's storage in your browser profile, so anyone with access to that
+profile could use it. The downloadable page never keeps a sign-in.
+
 It asks for little: the side panel itself, access to `localhost`, and, when you
 connect, optional access to the address of your own Actual server so it can see
 which account is open. It reads only the address of that tab. The website's

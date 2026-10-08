@@ -11,7 +11,9 @@ type RuleEntity = {
 };
 
 /** The slice of the Actual API the push page uses, beyond what the CLI does. */
-export type WebApi = ActualApi & {
+export type WebApi = Omit<ActualApi, 'init'> & {
+  /** The page always signs in first and connects with the session token. */
+  init(config: { serverURL: string; sessionToken: string }): Promise<unknown>;
   sync(): Promise<void>;
   getBudgets(): Promise<Array<{ name?: string; groupId?: string }>>;
   getServerVersion(): Promise<{ version: string } | { error: string }>;
@@ -26,6 +28,10 @@ export type Connection = {
   api: WebApi;
   /** The server's origin, such as `https://actual.example.com`. */
   serverOrigin: string;
+  /** The server's address as entered, tidied. */
+  serverURL: string;
+  /** The session token this connection signed in with. */
+  token: string;
   syncId: string;
   budgetName: string;
   serverVersion: string | null;

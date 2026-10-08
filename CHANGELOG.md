@@ -28,6 +28,10 @@ All notable changes to this project are recorded here. The format follows
 - A Chrome side panel extension, `India2Actual-extension.zip` on each release.
   It is the push page beside Actual, and it preselects the account you have open
   in Actual for the statement you drop in.
+- The extension can stay connected: tick Stay connected on this device and it
+  keeps a sign-in token, never the password, so the next connection needs one
+  click. Forget saved sign-in removes it, and a token the server no longer
+  accepts falls back to asking for the password.
 - A Privacy page on the website that says what each part does with your data.
 
 ### Fixed

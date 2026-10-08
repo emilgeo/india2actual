@@ -50,6 +50,14 @@ It is the same page, shown in the browser's side panel. It asks for:
   the address of that tab, and only to preselect the account. It never reads
   the page's contents, and you can refuse and still use the panel.
 
+If you tick Stay connected on this device, it keeps a sign-in token for your
+Actual server, your server address and your Sync ID in its own storage, on your
+computer only, so you do not have to type the password each time. It never keeps
+the password itself or a budget's encryption password. The token is the kind
+Actual's own app uses, and anyone with access to your browser profile could use
+it until the server stops accepting it. Forget saved sign-in deletes it, and unticking the box and
+connecting again does too. The downloadable page never keeps a sign-in.
+
 It does not collect, store or transmit anything about your browsing.
 
 ## Your Actual server
