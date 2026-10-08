@@ -9,17 +9,12 @@ import {
   interpretConvertedOutput,
   isConvertedOutput,
 } from './interpret/roundtrip.js';
+import { checksFor } from './interpret/checks.js';
 import { startingBalanceRow } from './interpret/opening.js';
 import { payeeGroups } from './interpret/payees.js';
 import type { StatementTransaction } from './interpret/rows.js';
 import { interpretSections } from './interpret/sections.js';
 import type { Section } from './interpret/sections.js';
-import {
-  validateBalances,
-  validateCardTotals,
-  validateSectionTotals,
-} from './interpret/validate.js';
-import type { Validation } from './interpret/validate.js';
 import type { DateOrder } from './interpret/values.js';
 import { loadMerchantRules } from './merchants-file.js';
 import type { MerchantRule } from './narration/merchants.js';
@@ -308,7 +303,7 @@ async function run(args: string[]): Promise<number> {
     stdout.write(
       buildReport({
         version: packageVersion(),
-        node: versions.node,
+        runtime: `Node ${versions.node}`,
         format: describeFormat(format),
         tables,
         sections: interpretSections(tables, interpretOptions).map(
@@ -411,35 +406,6 @@ async function run(args: string[]): Promise<number> {
   }
 
   return exitCode;
-}
-
-/** The independent checks that apply to a section, in the order they run. */
-function checksFor(
-  section: Section,
-): Array<{ name: string; unit: string; validation: Validation }> {
-  const { transactions, card } = section.result;
-  const checks = [
-    {
-      name: card ? 'Statement totals check' : 'Balance check',
-      unit: card ? 'totals' : 'rows',
-      validation: card
-        ? validateCardTotals(transactions, section.table.figures)
-        : validateBalances(transactions),
-    },
-  ];
-
-  if (!card) {
-    const totals = validateSectionTotals(transactions, section.table.totals);
-    if (totals.status !== 'skipped') {
-      checks.push({
-        name: 'Printed totals check',
-        unit: 'totals',
-        validation: totals,
-      });
-    }
-  }
-
-  return checks;
 }
 
 /** Tell the user which payees are guesses, with a rule to start from. */

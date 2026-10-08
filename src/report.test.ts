@@ -12,7 +12,7 @@ function table(rows: string[][]): Table {
 function report(...sources: Table[]): string {
   return buildReport({
     version: '0.0.0',
-    node: 'v0.0.0',
+    runtime: 'Node v0.0.0',
     format: 'CSV',
     tables: sources,
     sections: interpretSections(sources).map((section, index) => ({

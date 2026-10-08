@@ -19,6 +19,7 @@ import type { Item, Line } from './pdf.js';
 import { consolidatedLines, summaryFirstLines } from '../testing/fixtures.js';
 import { pdfFromLines } from '../testing/pdf.js';
 import { extractTablesFromBytes } from './bytes.js';
+import { isPasswordError } from './pdf.js';
 
 /**
  * Build a line from `[x, text]` pairs. Widths are approximated at 5 points per
@@ -667,5 +668,33 @@ describe('reading a real PDF file', () => {
     await extractTablesFromBytes(bytes, 'test.pdf');
 
     expect(bytes).toEqual(before);
+  });
+});
+
+describe('a password protected PDF', () => {
+  const locked = () => pdfFromLines(consolidatedLines(), { password: 'not-a-real-password' });
+
+  it('opens with the right password', async () => {
+    const { tables } = await extractTablesFromBytes(locked(), 'locked.pdf', {
+      password: 'not-a-real-password',
+    });
+
+    expect(interpretSections(tables).map(section => section.account)).toEqual([
+      '1111',
+      '2222',
+    ]);
+  });
+
+  it('says a password is needed, and when the one given is wrong', async () => {
+    const missing = await extractTablesFromBytes(locked(), 'locked.pdf').catch(
+      (error: unknown) => error,
+    );
+    const wrong = await extractTablesFromBytes(locked(), 'locked.pdf', {
+      password: 'wrong',
+    }).catch((error: unknown) => error);
+
+    expect(isPasswordError(missing)).toBe(true);
+    expect(isPasswordError(wrong)).toBe(true);
+    expect(isPasswordError(new Error('something else'))).toBe(false);
   });
 });

@@ -5,6 +5,11 @@ import { parseStatementDate } from '../interpret/values.js';
 
 import type { Figure, Table } from './types.js';
 
+/** Did opening the PDF fail because it needs a password, or the one given is wrong? */
+export function isPasswordError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'PasswordException';
+}
+
 export type PdfExtractOptions = {
   password?: string;
 };
@@ -91,6 +96,9 @@ async function readLines(
     // rejects a Node Buffer.
     data: new Uint8Array(bytes),
     useSystemFonts: true,
+    // Errors only: PDF.js otherwise prints a warning for every image stream it
+    // cannot decode, none of which affects the text.
+    verbosity: 0,
     ...(options.password ? { password: options.password } : {}),
   }).promise;
 

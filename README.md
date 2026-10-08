@@ -71,6 +71,19 @@ If you use it often, install it so you can drop the `npx`:
 npm install -g india2actual
 ```
 
+## No terminal? Use the browser version
+
+The website has a Convert page (the link at the top of this page leads to the
+website). Drop a statement into it, check the result, give any unclear payee a
+name, and download a file to import into Actual. A PDF, CSV or Excel file works,
+and a password protected PDF asks for its password.
+
+It does the same job as the command line and gives the same file. Your
+statement is read inside the page and is never uploaded: the page carries a
+security policy that forbids any network request, so it could not send it
+anywhere even by mistake. Names you give payees are saved in your browser only,
+and you can download them as a file that the command line reads too.
+
 ## Skip the import step
 
 If you run an Actual sync server, the tool can send transactions straight into

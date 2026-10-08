@@ -44,6 +44,7 @@ const BANK_CSV = [
 let folder: string;
 let csv: string;
 let pdf: string;
+let locked: string;
 
 beforeAll(() => {
   folder = mkdtempSync(join(tmpdir(), 'india2actual-cli-'));
@@ -51,6 +52,11 @@ beforeAll(() => {
   pdf = join(folder, 'consolidated.pdf');
   writeFileSync(csv, BANK_CSV);
   writeFileSync(pdf, pdfFromLines(consolidatedLines()));
+  locked = join(folder, 'locked.pdf');
+  writeFileSync(
+    locked,
+    pdfFromLines(consolidatedLines(), { password: 'not-a-real-password' }),
+  );
 });
 
 describe('the command line', () => {
@@ -169,5 +175,23 @@ describe('a statement that holds several accounts', () => {
     });
     expect(push.code).toBe(1);
     expect(push.err).toContain('--push sends to one Actual account');
+  });
+});
+
+describe('a password protected statement', () => {
+  it('opens with the password from the environment', () => {
+    const { code, err } = run([locked], {
+      STATEMENT_PASSWORD: 'not-a-real-password',
+    });
+
+    expect(code).toBe(0);
+    expect(err).toContain('Found 2 accounts in this statement');
+  });
+
+  it('asks for a password when there is none', () => {
+    const { code, err } = run([locked]);
+
+    expect(code).toBe(1);
+    expect(err.toLowerCase()).toContain('password');
   });
 });
