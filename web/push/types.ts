@@ -24,6 +24,8 @@ export type WebApi = ActualApi & {
 
 export type Connection = {
   api: WebApi;
+  /** The server's origin, such as `https://actual.example.com`. */
+  serverOrigin: string;
   syncId: string;
   budgetName: string;
   serverVersion: string | null;

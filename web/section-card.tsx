@@ -32,6 +32,7 @@ type Props = {
   ) => void;
   /** Set once connected to Actual. */
   connection: Connection | null;
+  openAccountId: string | null;
   categories: ReadonlyMap<number, string>;
   ruleRequests: RuleRequest[];
 };
@@ -182,6 +183,8 @@ export function SectionCard(props: Props) {
           number={number}
           rows={rowsToUse()}
           ruleRequests={props.ruleRequests}
+          openAccountId={props.openAccountId}
+          several={several}
         />
       ) : null}
 

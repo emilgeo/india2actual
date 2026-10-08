@@ -27,6 +27,8 @@ site/src/content/docs/changelog.md
 
 # Browser converter build and browser test output.
 dist-web/
+dist-extension/
+dist-extension-firefox/
 test-results/
 playwright-report/
 # Copied in from dist-web by the site workflow.

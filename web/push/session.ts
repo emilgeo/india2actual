@@ -36,6 +36,7 @@ export async function connect(form: ConnectForm): Promise<Connection> {
   const budgets = await api.getBudgets().catch(() => []);
   return {
     api,
+    serverOrigin: new URL(checked.url).origin,
     syncId,
     budgetName: budgets.find(budget => budget.groupId === syncId)?.name ?? 'your budget',
     serverVersion: 'version' in version ? version.version : null,

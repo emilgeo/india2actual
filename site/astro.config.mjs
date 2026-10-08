@@ -16,6 +16,7 @@ export default defineConfig({
         { label: 'Convert in your browser', link: '/convert/' },
         { label: 'Documentation', slug: 'docs' },
         { label: 'Changelog', slug: 'changelog' },
+        { label: 'Privacy', slug: 'privacy' },
       ],
       social: [
         {

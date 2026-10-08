@@ -75,6 +75,16 @@ describe('remembering which Actual account a statement account goes to', () => {
     ).toBe('');
   });
 
+  it('uses the account open in Actual before guessing from the name', () => {
+    const storage = store();
+    const key = statementKey('sync-1', section, 'all.pdf', 1);
+
+    expect(suggestAccount(storage, key, section, accounts, 'a1')).toBe('a1');
+    expect(suggestAccount(storage, key, section, accounts, 'not-an-account')).toBe('a2');
+    rememberAccount(storage, key, 'a2');
+    expect(suggestAccount(storage, key, section, accounts, 'a1')).toBe('a2');
+  });
+
   it('forgets a remembered account that no longer exists', () => {
     const storage = store();
     const key = statementKey('sync-1', section, 'all.pdf', 1);

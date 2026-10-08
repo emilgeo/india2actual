@@ -102,6 +102,20 @@ in Actual, and one click undoes the import. You can also give a payee a category
 and have Actual remember it as a rule, send card payments as transfers, and
 pick payees you already have in Actual from a list.
 
+### A side panel in Chrome
+
+The same push page is also available as a Chrome extension that opens in the
+browser's side panel, next to Actual, so everything stays in one window. Open an
+account in Actual and the panel preselects that account for the statement you
+drop in. Each release has `India2Actual-extension.zip`. It is not in the Chrome
+Web Store, so unzip it, open `chrome://extensions`, turn on Developer mode,
+choose Load unpacked and pick the folder, then click the toolbar icon.
+
+It asks for little: the side panel itself, access to `localhost`, and, when you
+connect, optional access to the address of your own Actual server so it can see
+which account is open. It reads only the address of that tab. The website's
+Privacy page has the details.
+
 Passwords stay in the page and are gone when you close it. Actual's browser
 support is marked experimental by Actual itself, and each file is built for one
 Actual release, so the page warns when your server runs a different one. Every

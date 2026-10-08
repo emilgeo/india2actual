@@ -25,6 +25,10 @@ All notable changes to this project are recorded here. The format follows
   account, preview what an import would do, push, see the closing balance checked
   against Actual's, and undo the import. Payees can be given a category, with an
   Actual rule so it is remembered, and card payments can be sent as transfers.
+- A Chrome side panel extension, `India2Actual-extension.zip` on each release.
+  It is the push page beside Actual, and it preselects the account you have open
+  in Actual for the statement you drop in.
+- A Privacy page on the website that says what each part does with your data.
 
 ### Fixed
 

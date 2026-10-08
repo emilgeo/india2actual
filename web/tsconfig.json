@@ -8,7 +8,7 @@
     "noEmit": true,
     "declaration": false,
     "sourceMap": false,
-    "types": []
+    "types": ["chrome"]
   },
   "include": ["./**/*.ts", "./**/*.tsx"],
   "exclude": ["./**/*.test.ts", "./e2e/**"]

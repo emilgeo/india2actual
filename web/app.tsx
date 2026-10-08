@@ -19,6 +19,7 @@ import {
   saveRules,
   withRule,
 } from './logic/rules-store.js';
+import { useActualAccount } from './extension/follow.js';
 import { ConnectPanel } from './push/connect-panel.js';
 import type { RuleRequest } from './push/actions.js';
 import type { Connection } from './push/types.js';
@@ -76,6 +77,7 @@ export function App() {
   const [ruleRequests, setRuleRequests] = useState<Map<string, RuleRequest[]>>(new Map());
   const [reportText, setReportText] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const openAccountId = useActualAccount(connection?.serverOrigin ?? null);
   const nextId = useRef(1);
 
   const setRules = (next: RuleSpec[]) => {
@@ -396,6 +398,7 @@ export function App() {
                   nameGroup(file.id, index, group, name, remember, extras)
                 }
                 connection={connection}
+                openAccountId={openAccountId}
                 categories={categoriesFor(file.id, index)}
                 ruleRequests={ruleRequests.get(sectionKey(file.id, index)) ?? []}
               />

@@ -72,7 +72,8 @@ npm run typecheck # tsc --noEmit
 npm run build     # tsc, emits dist/
 npm run dev -- statement.csv   # run the CLI from source
 npm run build:web # builds the browser pages into dist-web/ (convert and push)
-npm run test:web  # Playwright tests of that page; needs a browser installed
+npm run build:extension # builds dist-extension/ and its zip from web/
+npm run test:web  # Playwright tests of the pages and extension; needs Chromium
 ```
 
 Node 22.14 or newer. ESM only (`"type": "module"`), so relative imports need the
@@ -90,6 +91,7 @@ optional properties cannot be assigned `undefined` explicitly.
 | `src/out`         | Write CSV, or push via `@actual-app/api`                     |
 | `src/env-file.ts` | Load settings from `.env`                                    |
 | `web/`            | Browser converter (Preact), built to one HTML file           |
+| `extension/`      | Chrome side panel wrapper around `web/`, see `scripts/`      |
 | `site/`           | Public website (Astro Starlight), see the Website section    |
 
 Code in `src/` that `web/` imports (extract, interpret, narration, report,

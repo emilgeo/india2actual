@@ -1,4 +1,4 @@
-import { useId, useState } from 'preact/hooks';
+import { useEffect, useId, useState } from 'preact/hooks';
 
 import { closingBalance } from '../../src/interpret/opening.js';
 import type { StatementTransaction } from '../../src/interpret/rows.js';
@@ -28,6 +28,10 @@ type Props = {
   /** The rows to send, with the user's choices applied. */
   rows: StatementTransaction[];
   ruleRequests: RuleRequest[];
+  /** The account open in the Actual tab beside the side panel, if any. */
+  openAccountId: string | null;
+  /** Whether the statement holds several accounts, which one tab cannot settle. */
+  several: boolean;
 };
 
 type Status =
@@ -56,13 +60,33 @@ function describeResult(result: PushResult): string {
   return parts.join(', ');
 }
 
-export function PushPanel({ connection, file, section, number, rows, ruleRequests }: Props) {
+export function PushPanel({
+  connection,
+  file,
+  section,
+  number,
+  rows,
+  ruleRequests,
+  openAccountId,
+  several,
+}: Props) {
   const key = statementKey(connection.syncId, section, file.name, number);
   const accountId_ = useId();
   const transferId_ = useId();
+  const open = several ? null : openAccountId;
   const [accountId, setAccountId] = useState(() =>
-    suggestAccount(storage, key, section, connection.accounts),
+    suggestAccount(storage, key, section, connection.accounts, open),
   );
+
+  // The Actual tab can arrive after this panel does. Fill the choice in then,
+  // but never replace one the person has made.
+  useEffect(() => {
+    if (!accountId && open) {
+      setAccountId(suggestAccount(storage, key, section, connection.accounts, open));
+    }
+  }, [open]);
+
+  const openName = connection.accounts.find(account => account.id === open)?.name;
   const [transferToId, setTransferToId] = useState('');
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
 
@@ -124,6 +148,20 @@ export function PushPanel({ connection, file, section, number, rows, ruleRequest
   return (
     <section class="panel push" aria-label="Push to Actual">
       <h4>Push to Actual</h4>
+      {openName ? (
+        <p class="muted">
+          Actual is showing {openName}.{' '}
+          {accountId !== open ? (
+            <button
+              type="button"
+              class="link"
+              onClick={() => setAccountId(open ?? '')}
+            >
+              Use it
+            </button>
+          ) : null}
+        </p>
+      ) : null}
       <div class="fields">
         <div class="field">
           <label htmlFor={accountId_}>Import into</label>

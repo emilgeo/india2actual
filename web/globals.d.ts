@@ -5,3 +5,5 @@ declare const __PDF_WORKER__: string;
 declare const __PUSH__: boolean;
 /** The version of the Actual API bundled into the push build. */
 declare const __ACTUAL_API_VERSION__: string;
+/** True in the build that runs as a browser extension's side panel. */
+declare const __EXTENSION__: boolean;

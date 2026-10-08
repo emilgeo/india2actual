@@ -40,18 +40,23 @@ export function rememberAccount(
 }
 
 /**
- * The Actual account to start from: the one used last time, else one whose name
- * carries the statement account's last digits, else none.
+ * The Actual account to start from: the one used last time, else the one open
+ * in Actual beside this page, else one whose name carries the statement
+ * account's last digits, else none.
  */
 export function suggestAccount(
   storage: Storage,
   key: string,
   section: Section,
   accounts: Account[],
+  open: string | null = null,
 ): string {
   const remembered = read(storage)[key];
   if (remembered && accounts.some(account => account.id === remembered)) {
     return remembered;
+  }
+  if (open && accounts.some(account => account.id === open)) {
+    return open;
   }
   const digits = section.account;
   return (

@@ -1,7 +1,9 @@
 import { useState } from 'preact/hooks';
 
 import { safeStorage } from '../dom.js';
+import { requestHostAccess } from '../extension/follow.js';
 
+import { checkServerAddress } from './address.js';
 import { connect, disconnect, versionsMatch } from './session.js';
 import type { Connection } from './types.js';
 
@@ -41,6 +43,14 @@ export function ConnectPanel({ connection, onConnected, onDisconnected }: Props)
     setBusy(true);
     setError('');
     try {
+      // First, while the click that started this still counts, so the browser
+      // may ask. Refusing only turns off following the Actual tab.
+      if (__EXTENSION__) {
+        const checked = checkServerAddress(form.serverURL);
+        if (checked.url !== undefined) {
+          await requestHostAccess(new URL(checked.url).origin);
+        }
+      }
       const opened = await connect(form);
       if (remember) {
         try {

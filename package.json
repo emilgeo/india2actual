@@ -42,7 +42,8 @@
     "typecheck": "tsc --noEmit && tsc -p web/tsconfig.json",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "build:web": "node scripts/build-web.mjs",
-    "test:web": "playwright test"
+    "test:web": "playwright test",
+    "build:extension": "node scripts/build-extension.mjs"
   },
   "dependencies": {
     "csv-parse": "^7.0.2",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "@actual-app/sync-server": "^26.10.0",
     "@playwright/test": "^1.64.0",
+    "@types/chrome": "^0.3.4",
     "@types/node": "^22.10.0",
     "esbuild": "^0.28.2",
     "preact": "^11.0.1",
