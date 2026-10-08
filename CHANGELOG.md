@@ -20,6 +20,11 @@ All notable changes to this project are recorded here. The format follows
 - A browser version of the converter on the website. Drop a statement (PDF, CSV
   or Excel), check it, name unclear payees, and download one file per account.
   Nothing is uploaded, and the page cannot make network requests.
+- `India2Actual.html`, attached to each release, is the same page with a
+  connection to your Actual server. Choose an Actual account for each statement
+  account, preview what an import would do, push, see the closing balance checked
+  against Actual's, and undo the import. Payees can be given a category, with an
+  Actual rule so it is remembered, and card payments can be sent as transfers.
 
 ### Fixed
 

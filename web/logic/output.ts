@@ -19,6 +19,8 @@ export type RowChoices = {
   excluded: ReadonlySet<number>;
   /** Names typed for single rows, by position. */
   renamed: ReadonlyMap<number, string>;
+  /** Actual category ids chosen for rows, by position. */
+  categories?: ReadonlyMap<number, string>;
   startingBalance: boolean;
 };
 
@@ -32,7 +34,14 @@ export function rowsToDownload(
       return [];
     }
     const name = choices.renamed.get(index);
-    return [name ? { ...row, payee: name } : row];
+    const categoryId = choices.categories?.get(index);
+    return [
+      {
+        ...row,
+        ...(name ? { payee: name } : {}),
+        ...(categoryId ? { categoryId } : {}),
+      },
+    ];
   });
 
   const opening = choices.startingBalance ? startingBalanceRow(section) : null;

@@ -84,6 +84,29 @@ security policy that forbids any network request, so it could not send it
 anywhere even by mistake. Names you give payees are saved in your browser only,
 and you can download them as a file that the command line reads too.
 
+### Pushing from the browser
+
+To skip the import step too, download `India2Actual.html` from the
+[latest release](https://github.com/emilgeo/india2actual/releases/latest) and
+open it from your computer. It is the same page with a connection to your Actual
+server added, so it has to be a separate file: the Convert page is forbidden
+from making any network request, and this one may reach only an `https` server
+or one on your own computer, nothing else.
+
+Enter your server address, its password and the budget's Sync ID (Settings, Show
+advanced settings). Then for each account in a statement choose the Actual
+account it belongs to, press Preview to see how many rows are new and how many
+already exist, and press Push. The page remembers your choice for next time.
+Afterwards it compares the statement's closing balance with the account's balance
+in Actual, and one click undoes the import. You can also give a payee a category
+and have Actual remember it as a rule, send card payments as transfers, and
+pick payees you already have in Actual from a list.
+
+Passwords stay in the page and are gone when you close it. Actual's browser
+support is marked experimental by Actual itself, and each file is built for one
+Actual release, so the page warns when your server runs a different one. Every
+release lists a fingerprint for each file in `SHA256SUMS`.
+
 ## Skip the import step
 
 If you run an Actual sync server, the tool can send transactions straight into

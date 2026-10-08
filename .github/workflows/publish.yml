@@ -43,3 +43,32 @@ jobs:
           fi
       - name: Publish to npm
         run: npm publish
+
+  pages:
+    # The push page is attached to the release, with fingerprints for it and the
+    # convert page, so what a person downloads can be checked.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build the pages
+        run: npm run build:web
+      - name: Attach them to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: >
+          gh release upload "$TAG"
+          dist-web/India2Actual.html
+          dist-web/India2Actual-convert.html
+          dist-web/SHA256SUMS
+          --clobber

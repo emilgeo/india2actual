@@ -10,6 +10,10 @@ import { downloadText, formatAmount } from './dom.js';
 import type { LoadedFile } from './logic/files.js';
 import { csvFileName, rowsToDownload } from './logic/output.js';
 import { PayeeReview } from './payee-review.js';
+import type { NameExtras } from './payee-review.js';
+import type { RuleRequest } from './push/actions.js';
+import { PushPanel } from './push/push-panel.js';
+import type { Connection } from './push/types.js';
 
 type Props = {
   file: LoadedFile;
@@ -20,7 +24,16 @@ type Props = {
   excluded: ReadonlySet<number>;
   renamed: ReadonlyMap<number, string>;
   onExclude: (index: number, excluded: boolean) => void;
-  onName: (group: PayeeGroup, name: string, remember: boolean) => void;
+  onName: (
+    group: PayeeGroup,
+    name: string,
+    remember: boolean,
+    extras: NameExtras,
+  ) => void;
+  /** Set once connected to Actual. */
+  connection: Connection | null;
+  categories: ReadonlyMap<number, string>;
+  ruleRequests: RuleRequest[];
 };
 
 const PREVIEW_ROWS = 15;
@@ -44,13 +57,19 @@ export function SectionCard(props: Props) {
       ? `Account ${number}`
       : file.name;
 
-  const download = () => {
-    const rows = rowsToDownload(section, {
+  const rowsToUse = () =>
+    rowsToDownload(section, {
       excluded,
       renamed,
+      categories: props.categories,
       startingBalance: props.startingBalance,
     });
-    downloadText(csvFileName(file.name, section, number, several), toCsv(rows));
+
+  const download = () => {
+    downloadText(
+      csvFileName(file.name, section, number, several),
+      toCsv(rowsToUse()),
+    );
   };
 
   const shown = showAll ? transactions : transactions.slice(0, PREVIEW_ROWS);
@@ -91,6 +110,8 @@ export function SectionCard(props: Props) {
         transactions={transactions}
         renamed={renamed}
         onName={props.onName}
+        categoryGroups={props.connection?.categoryGroups}
+        knownPayees={props.connection?.payees.map(payee => payee.name)}
       />
 
       <table class="rows">
@@ -151,6 +172,17 @@ export function SectionCard(props: Props) {
         >
           {showAll ? 'Show fewer' : `Show all ${transactions.length} rows`}
         </button>
+      ) : null}
+
+      {props.connection ? (
+        <PushPanel
+          connection={props.connection}
+          file={file}
+          section={section}
+          number={number}
+          rows={rowsToUse()}
+          ruleRequests={props.ruleRequests}
+        />
       ) : null}
 
       <footer class="card-foot">

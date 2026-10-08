@@ -71,7 +71,7 @@ npm test          # vitest, runs once and exits
 npm run typecheck # tsc --noEmit
 npm run build     # tsc, emits dist/
 npm run dev -- statement.csv   # run the CLI from source
-npm run build:web # builds the browser converter into dist-web/convert.html
+npm run build:web # builds the browser pages into dist-web/ (convert and push)
 npm run test:web  # Playwright tests of that page; needs a browser installed
 ```
 
@@ -95,7 +95,7 @@ optional properties cannot be assigned `undefined` explicitly.
 Code in `src/` that `web/` imports (extract, interpret, narration, report,
 `out/csv-text.ts`) must stay free of Node APIs, so a browser can bundle it. File
 and process access lives in `cli.ts`, `env-file.ts`, `merchants-file.ts`,
-`extract/index.ts`, `out/csv.ts` and the Node side of `out/push.ts`.
+`extract/index.ts`, `out/csv.ts` and `out/push-node.ts`.
 
 Formats are detected by **inspecting file contents, not the extension**,
 because Indian banks routinely name an HTML table `.xls`.

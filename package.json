@@ -56,6 +56,7 @@
     "@actual-app/api": "^26.10.0"
   },
   "devDependencies": {
+    "@actual-app/sync-server": "^26.10.0",
     "@playwright/test": "^1.64.0",
     "@types/node": "^22.10.0",
     "esbuild": "^0.28.2",

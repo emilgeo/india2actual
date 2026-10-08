@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Table } from '../extract/types.js';
 
-import { startingBalance, startingBalanceRow } from './opening.js';
+import { closingBalance, startingBalance, startingBalanceRow } from './opening.js';
 import { interpretSections } from './sections.js';
 
 const HEADER = ['Date', 'Narration', 'Withdrawal', 'Deposit', 'Balance'];
@@ -86,5 +86,27 @@ describe('startingBalanceRow', () => {
     ]);
 
     expect(startingBalanceRow(section)).toBeNull();
+  });
+});
+
+describe('closingBalance', () => {
+  it('is the balance of the newest row, whichever way the statement runs', () => {
+    const oldestFirst = sectionFor([
+      ['12/03/2025', 'ACME STORE', '725.00', '', '9,275.00'],
+      ['13/03/2025', 'ACME CAFE', '', '430.00', '9,705.00'],
+    ]);
+    const newestFirst = sectionFor([
+      ['13/03/2025', 'ACME CAFE', '', '430.00', '9,705.00'],
+      ['12/03/2025', 'ACME STORE', '725.00', '', '9,275.00'],
+    ]);
+
+    expect(closingBalance(oldestFirst)).toEqual({ amount: 9705, date: '2025-03-13' });
+    expect(closingBalance(newestFirst)).toEqual({ amount: 9705, date: '2025-03-13' });
+  });
+
+  it('is null when no row carries a balance', () => {
+    const section = sectionFor([['12/03/2025', 'ACME STORE', '725.00', '', '']]);
+
+    expect(closingBalance(section)).toBeNull();
   });
 });

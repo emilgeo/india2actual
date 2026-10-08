@@ -20,6 +20,7 @@ import { loadMerchantRules } from './merchants-file.js';
 import type { MerchantRule } from './narration/merchants.js';
 import { toCsv, writeCsv } from './out/csv.js';
 import { nodeTooOldForPush, pushTransactions } from './out/push.js';
+import { connectNode } from './out/push-node.js';
 import type { PushConfig } from './out/push.js';
 import { buildReport } from './report.js';
 
@@ -546,7 +547,7 @@ async function handleSection(
   }
 
   if (pushConfig) {
-    const result = await pushTransactions(rows, pushConfig);
+    const result = await pushTransactions(rows, pushConfig, connectNode);
 
     const verb = result.dryRun ? 'would add' : 'added';
     const alsoVerb = result.dryRun ? 'would update' : 'updated';

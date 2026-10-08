@@ -22,6 +22,8 @@ export type StatementTransaction = {
   payeeSource?: PayeeSource;
   /** The merchant rule pattern that would catch this narration. */
   payeeRule?: string;
+  /** An Actual category id chosen in the browser, sent when pushing. */
+  categoryId?: string;
   /** Only set when safe to use as `imported_id`. See `dropRepeatedRefs`. */
   ref?: string;
   /** Running balance, when the statement has one. Used only for validation. */

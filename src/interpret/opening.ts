@@ -63,3 +63,22 @@ export function startingBalanceRow(
     kind: 'other',
   };
 }
+
+/**
+ * The balance the statement ends on and the date it applies to, taken from the
+ * newest row. Null when the rows carry no balance.
+ */
+export function closingBalance(
+  section: Section,
+): { amount: number; date: string } | null {
+  const { transactions } = section.result;
+  const order = validateBalances(transactions).order;
+  const newest =
+    order === 'descending'
+      ? transactions.find(row => row.balance !== undefined)
+      : [...transactions].reverse().find(row => row.balance !== undefined);
+
+  return newest && newest.balance !== undefined
+    ? { amount: newest.balance, date: newest.date }
+    : null;
+}

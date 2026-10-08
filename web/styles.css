@@ -407,6 +407,38 @@ select:focus-visible {
   font-size: 0.85rem;
 }
 
+form.panel,
+.push {
+  display: block;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.fields label,
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.push h4 {
+  margin-bottom: 0.25rem;
+}
+
+.reconcile.ok {
+  color: var(--good);
+}
+
+.reconcile.off {
+  color: var(--bad);
+}
+
 @media (max-width: 40rem) {
   .rows .narration {
     display: none;

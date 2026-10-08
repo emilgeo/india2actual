@@ -19,6 +19,10 @@ import {
   saveRules,
   withRule,
 } from './logic/rules-store.js';
+import { ConnectPanel } from './push/connect-panel.js';
+import type { RuleRequest } from './push/actions.js';
+import type { Connection } from './push/types.js';
+import type { NameExtras } from './payee-review.js';
 import { SectionCard } from './section-card.js';
 
 const storage = safeStorage();
@@ -67,6 +71,9 @@ export function App() {
   const [rules, setRulesState] = useState<RuleSpec[]>(() => loadRules(storage));
   const [renamed, setRenamed] = useState<Map<string, string>>(new Map());
   const [excluded, setExcluded] = useState<Map<string, Set<number>>>(new Map());
+  const [connection, setConnection] = useState<Connection | null>(null);
+  const [categories, setCategories] = useState<Map<string, string>>(new Map());
+  const [ruleRequests, setRuleRequests] = useState<Map<string, RuleRequest[]>>(new Map());
   const [reportText, setReportText] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const nextId = useRef(1);
@@ -107,24 +114,58 @@ export function App() {
     group: PayeeGroup,
     name: string,
     remember: boolean,
+    extras: NameExtras,
   ) => {
-    if (remember && group.rule) {
+    const key = sectionKey(fileId, index);
+    if (name && remember && group.rule) {
       setRules(withRule(rules, { pattern: group.rule, name }));
-      return;
+    } else if (name) {
+      setRenamed(previous => {
+        const next = new Map(previous);
+        for (const row of group.indexes) {
+          next.set(`${key}:${row}`, name);
+        }
+        return next;
+      });
     }
-    setRenamed(previous => {
-      const next = new Map(previous);
-      for (const row of group.indexes) {
-        next.set(`${sectionKey(fileId, index)}:${row}`, name);
+
+    const { categoryId } = extras;
+    if (categoryId) {
+      setCategories(previous => {
+        const next = new Map(previous);
+        for (const row of group.indexes) {
+          next.set(`${key}:${row}`, categoryId);
+        }
+        return next;
+      });
+      if (extras.makeRule) {
+        setRuleRequests(previous => {
+          const next = new Map(previous);
+          next.set(key, [
+            ...(next.get(key) ?? []),
+            { payee: name || group.payee, categoryId },
+          ]);
+          return next;
+        });
       }
-      return next;
-    });
+    }
   };
 
   const renamedFor = (fileId: number, index: number) => {
     const prefix = `${sectionKey(fileId, index)}:`;
     const found = new Map<number, string>();
     for (const [key, value] of renamed) {
+      if (key.startsWith(prefix)) {
+        found.set(Number(key.slice(prefix.length)), value);
+      }
+    }
+    return found;
+  };
+
+  const categoriesFor = (fileId: number, index: number) => {
+    const prefix = `${sectionKey(fileId, index)}:`;
+    const found = new Map<number, string>();
+    for (const [key, value] of categories) {
       if (key.startsWith(prefix)) {
         found.set(Number(key.slice(prefix.length)), value);
       }
@@ -226,6 +267,25 @@ export function App() {
           }}
         />
       </label>
+
+      {__PUSH__ ? (
+        <ConnectPanel
+          connection={connection}
+          onConnected={setConnection}
+          onDisconnected={() => setConnection(null)}
+        />
+      ) : (
+        <p class="muted">
+          To push straight into Actual instead of downloading a file, download{' '}
+          <a
+            href="https://github.com/emilgeo/india2actual/releases/latest/download/India2Actual.html"
+            rel="noreferrer"
+          >
+            India2Actual.html
+          </a>{' '}
+          from the latest release and open it from your computer.
+        </p>
+      )}
 
       <details class="options">
         <summary>Options</summary>
@@ -332,9 +392,12 @@ export function App() {
                 excluded={excluded.get(sectionKey(file.id, index)) ?? new Set()}
                 renamed={renamedFor(file.id, index)}
                 onExclude={(row, out) => exclude(file.id, index, row, out)}
-                onName={(group, name, remember) =>
-                  nameGroup(file.id, index, group, name, remember)
+                onName={(group, name, remember, extras) =>
+                  nameGroup(file.id, index, group, name, remember, extras)
                 }
+                connection={connection}
+                categories={categoriesFor(file.id, index)}
+                ruleRequests={ruleRequests.get(sectionKey(file.id, index)) ?? []}
               />
             ))}
 

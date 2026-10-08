@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -12,7 +11,7 @@ import { consolidatedLines } from '../../src/testing/fixtures.js';
 import { pdfFromLines } from '../../src/testing/pdf.js';
 
 const root = resolve(import.meta.dirname, '..', '..');
-const pageUrl = pathToFileURL(join(root, 'dist-web', 'convert.html')).href;
+const pageUrl = pathToFileURL(join(root, 'dist-web', 'India2Actual-convert.html')).href;
 
 const CSV = [
   'Date,Narration,Withdrawal Amt.,Deposit Amt.,Closing Balance',
@@ -47,10 +46,6 @@ const blocked = (page: Page) =>
   page.evaluate(() => (window as unknown as { __blocked: string[] }).__blocked);
 
 test.beforeAll(() => {
-  execFileSync(process.execPath, [join(root, 'scripts/build-web.mjs')], {
-    cwd: root,
-    stdio: 'ignore',
-  });
   folder = mkdtempSync(join(tmpdir(), 'india2actual-web-'));
 });
 
