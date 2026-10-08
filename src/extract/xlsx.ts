@@ -41,9 +41,13 @@ function cellText(value: ExcelJS.CellValue): string {
   return String(value);
 }
 
-export async function extractXlsx(path: string): Promise<Table> {
+export async function extractXlsx(
+  bytes: Uint8Array,
+  path: string,
+): Promise<Table> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(path);
+  // The typings ask for a Node Buffer, but the reader accepts any byte array.
+  await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
 
   // Statement workbooks carry cover, notes or summary sheets. A sheet with a
   // transaction header wins outright, because a notes sheet can be longer than

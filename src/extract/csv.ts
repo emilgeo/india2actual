@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 import { parse } from 'csv-parse/sync';
 
 import type { Table } from './types.js';
@@ -51,11 +49,11 @@ export function sniffDelimiter(contents: string): string {
   return best;
 }
 
-export async function extractCsv(
+export function tableFromCsv(
+  contents: string,
   path: string,
   options: { delimiter?: string } = {},
-): Promise<Table> {
-  const contents = await readFile(path, 'utf8');
+): Table {
   const delimiter = options.delimiter ?? sniffDelimiter(contents);
 
   const rows = parse(contents, {

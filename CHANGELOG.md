@@ -6,6 +6,18 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Added
+
+- After each run the tool lists the payee names it was least sure about, most
+  frequent first, with a rule to start from for a `--merchants` file.
+- `--starting-balance` adds a `Starting Balance` row for the balance before the
+  first transaction, so a first import leaves Actual agreeing with the bank.
+  It needs the statement to show that balance, and is not offered for credit
+  cards.
+- A merchants rule can now name a narration that has no name in it, such as a
+  transfer to an account number. Write the pattern against the narration in
+  lowercase with its digits removed.
+
 ## 0.4.0 - 2026-10-07
 
 ### Added

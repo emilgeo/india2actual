@@ -186,6 +186,21 @@ export function normalizeForLookup(value: string): string {
 }
 
 /**
+ * Match only the user's own rules, against a value that has already been
+ * normalised the same way their patterns are written. Null when none match.
+ */
+export function lookupUserRule(
+  value: string,
+  rules: MerchantRule[],
+): string | null {
+  const normalized = normalizeForLookup(value);
+  if (!normalized) {
+    return null;
+  }
+  return rules.find(rule => rule.pattern.test(normalized))?.name ?? null;
+}
+
+/**
  * Resolve a canonical merchant name, or null when nothing matches.
  * `extraRules` come from the user's local override file and win over built-ins.
  */

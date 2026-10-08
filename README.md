@@ -140,6 +140,18 @@ Write patterns in lowercase with no spaces or dots. They are matched against
 the UPI ID (the part before the `@`) or the merchant name. Your rules win over
 the built-in ones.
 
+You do not have to guess the patterns. After each run the tool lists the
+payees it was least sure about, most frequent first, with a rule to start from.
+Copy the rule into your file and fill in the name:
+
+```
+3 payee name(s) covering 5 row(s) may be worth naming. A rule in a --merchants file does it:
+  3 x 9876543210@ybl  {"pattern":"^9876543210","name":""}
+```
+
+For a narration that has no name in it at all, such as a transfer to an account
+number, the pattern is the narration in lowercase with its digits removed.
+
 Two cases where rules are especially useful:
 
 - **EMIs and other auto-debits (NACH).** The bank's text has no name, only a
@@ -340,6 +352,7 @@ real statement.
 | `--dry-run`                  | With `--push`, report what would change without writing.                                                    |
 | `--transfer-to <account>`    | With `--push`, send card payments as transfers with this account. See [above](#card-payments-as-transfers). |
 | `--section <n>`              | For a statement with several accounts, handle only the nth. Required with `--push`. See [above](#statements-with-several-accounts). |
+| `--starting-balance`         | Add a `Starting Balance` row for the balance before the first transaction, for a first import. Bank statements only, and only when the statement shows that balance. |
 | `--force`                    | Write even if the balance check fails.                                                                      |
 | `--quiet`                    | Only report problems.                                                                                       |
 | `--debug-layout`             | Print a report on how the file was read, safe to paste into an issue, and write nothing.                    |

@@ -1,7 +1,7 @@
 import type { Table } from '../extract/types.js';
 import type { MerchantRule } from '../narration/merchants.js';
 import { parseNarration } from '../narration/parse.js';
-import type { NarrationKind } from '../narration/types.js';
+import type { NarrationKind, PayeeSource } from '../narration/types.js';
 
 import { findHeader } from './header.js';
 import type { ColumnMap } from './header.js';
@@ -18,6 +18,10 @@ export type StatementTransaction = {
   /** Original narration, for Actual's `imported_payee`. */
   raw: string;
   kind: NarrationKind;
+  /** Which link of the payee fallback chain named the payee. */
+  payeeSource?: PayeeSource;
+  /** The merchant rule pattern that would catch this narration. */
+  payeeRule?: string;
   /** Only set when safe to use as `imported_id`. See `dropRepeatedRefs`. */
   ref?: string;
   /** Running balance, when the statement has one. Used only for validation. */
@@ -245,6 +249,8 @@ export function interpretTable(
       payee: parsed.merchant,
       raw: parsed.raw,
       kind: parsed.kind,
+      payeeSource: parsed.source,
+      ...(parsed.rule ? { payeeRule: parsed.rule } : {}),
       ...(ref ? { ref } : {}),
       ...(balance !== null ? { balance } : {}),
     });

@@ -29,7 +29,8 @@ export type PushConfig = {
   serverURL: string;
   password: string;
   syncId: string;
-  dataDir: string;
+  /** Where the Node API keeps its local copy of the budget. Not used in a browser. */
+  dataDir?: string;
   /** End-to-end encryption password, for encrypted budget files. */
   encryptionPassword?: string;
   /** Account name (case-insensitive) or id. */
@@ -187,9 +188,9 @@ type ActualAccount = { id: string; name: string; closed?: boolean };
  * Declared here rather than imported so this file type-checks whether or not
  * the optional dependency is installed.
  */
-type ActualApi = {
+export type ActualApi = {
   init(config: {
-    dataDir: string;
+    dataDir?: string;
     serverURL: string;
     password: string;
   }): Promise<unknown>;
@@ -251,17 +252,15 @@ export function resolveAccount(
   return match;
 }
 
+/** Opens a connection to Actual and returns the API, ready to use. */
+export type ActualConnector = (config: PushConfig) => Promise<ActualApi>;
+
 /**
- * Send transactions to Actual.
- *
- * `@actual-app/api` is imported dynamically so the converter works without it
- * installed, and so a missing install produces an actionable message rather
- * than a module-resolution error at startup.
+ * The connector for Node. `@actual-app/api` is imported dynamically so the
+ * converter works without it installed, and so a missing install produces an
+ * actionable message rather than a module-resolution error at startup.
  */
-export async function pushTransactions(
-  transactions: StatementTransaction[],
-  config: PushConfig,
-): Promise<PushResult> {
+export const connectNode: ActualConnector = async config => {
   let api: ActualApi;
   try {
     // Non-literal specifier on purpose: it keeps TypeScript from trying to
@@ -276,6 +275,10 @@ export async function pushTransactions(
     );
   }
 
+  if (!config.dataDir) {
+    throw new Error('A data directory is needed to connect from Node');
+  }
+
   // The API reads this directory on startup and fails if it does not exist.
   await mkdir(config.dataDir, { recursive: true });
 
@@ -284,6 +287,20 @@ export async function pushTransactions(
     serverURL: config.serverURL,
     password: config.password,
   });
+
+  return api;
+};
+
+/**
+ * Send transactions to Actual. `connect` says how to reach the API, which is
+ * the one part that differs between Node and a browser.
+ */
+export async function pushTransactions(
+  transactions: StatementTransaction[],
+  config: PushConfig,
+  connect: ActualConnector = connectNode,
+): Promise<PushResult> {
+  const api = await connect(config);
 
   try {
     await api.downloadBudget(

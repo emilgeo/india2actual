@@ -22,7 +22,10 @@ const EPSILON = 0.005;
  * The balance a table says it starts from, taken from an opening balance row
  * it prints, or null when it prints none.
  */
-function openingBalance(table: Table, result: Interpreted): number | null {
+export function openingBalance(
+  table: Table,
+  result: Interpreted,
+): number | null {
   const printed = table.totals?.find(figure =>
     OPENING_ROW.test(figure.label),
   );

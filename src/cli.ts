@@ -9,6 +9,9 @@ import {
   interpretConvertedOutput,
   isConvertedOutput,
 } from './interpret/roundtrip.js';
+import { startingBalanceRow } from './interpret/opening.js';
+import { payeeGroups } from './interpret/payees.js';
+import type { StatementTransaction } from './interpret/rows.js';
 import { interpretSections } from './interpret/sections.js';
 import type { Section } from './interpret/sections.js';
 import {
@@ -47,6 +50,9 @@ Options:
   --section <n>         For a statement that holds several accounts, handle only
                         the nth. Without it each account gets its own CSV.
                         Required with --push.
+  --starting-balance    Add a Starting Balance row for the balance before the
+                        first transaction, for a first import. Bank statements
+                        only, and only when the statement shows that balance.
   --debug-layout        Print a report on how the file was read, with all text
                         masked so it is safe to paste into an issue, and write
                         nothing.
@@ -89,6 +95,7 @@ type Options = {
   merchants?: string;
   card: boolean;
   section?: number;
+  startingBalance: boolean;
   debugLayout: boolean;
   force: boolean;
   quiet: boolean;
@@ -111,6 +118,7 @@ function parseArgs(args: string[]): Options | null {
     force: false,
     quiet: false,
     card: false,
+    startingBalance: false,
     debugLayout: false,
     push: false,
     dryRun: false,
@@ -174,6 +182,9 @@ function parseArgs(args: string[]): Options | null {
         options.section = value;
         break;
       }
+      case '--starting-balance':
+        options.startingBalance = true;
+        break;
       case '--debug-layout':
         options.debugLayout = true;
         break;
@@ -431,6 +442,32 @@ function checksFor(
   return checks;
 }
 
+/** Tell the user which payees are guesses, with a rule to start from. */
+function logUnclearPayees(
+  transactions: StatementTransaction[],
+  log: (message: string) => void,
+): void {
+  const groups = payeeGroups(transactions);
+  if (!groups.length) {
+    return;
+  }
+
+  const rows = groups.reduce((sum, group) => sum + group.count, 0);
+  log(
+    `${groups.length} payee name(s) covering ${rows} row(s) may be worth ` +
+      'naming. A rule in a --merchants file does it:',
+  );
+  for (const group of groups.slice(0, 10)) {
+    const rule = group.rule
+      ? `  ${JSON.stringify({ pattern: group.rule, name: '' })}`
+      : '';
+    log(`  ${group.count} x ${group.payee}${rule}`);
+  }
+  if (groups.length > 10) {
+    log(`  and ${groups.length - 10} more`);
+  }
+}
+
 type SectionContext = {
   options: Options;
   pushConfig: PushConfig | null;
@@ -523,8 +560,27 @@ async function handleSection(
     }
   }
 
+  logUnclearPayees(transactions, log);
+
+  let rows = transactions;
+  if (options.startingBalance) {
+    const opening = card ? null : startingBalanceRow(section);
+    if (opening) {
+      rows = [opening, ...transactions];
+      log(
+        `Added a Starting Balance row of ${opening.amount.toFixed(2)} on ` +
+          `${opening.date}.`,
+      );
+    } else {
+      log(
+        'No Starting Balance row: the statement does not show the balance ' +
+          'before its first transaction, or it was zero.',
+      );
+    }
+  }
+
   if (pushConfig) {
-    const result = await pushTransactions(transactions, pushConfig);
+    const result = await pushTransactions(rows, pushConfig);
 
     const verb = result.dryRun ? 'would add' : 'added';
     const alsoVerb = result.dryRun ? 'would update' : 'updated';
@@ -557,11 +613,11 @@ async function handleSection(
   }
 
   if (options.useStdout) {
-    stdout.write(toCsv(transactions));
+    stdout.write(toCsv(rows));
     return 0;
   }
 
-  await writeCsv(outPath, transactions);
+  await writeCsv(outPath, rows);
   log(`Wrote ${outPath}`);
 
   return 0;
