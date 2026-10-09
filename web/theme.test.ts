@@ -24,7 +24,7 @@ describe('theme', () => {
   });
 
   it('ignores a saved value it does not know', () => {
-    expect(loadTheme(memory({ 'india2actual.theme.v1': 'sepia' }))).toBe('system');
+    expect(loadTheme(memory({ 'starlight-theme': 'sepia' }))).toBe('system');
   });
 
   it('works without storage', () => {

@@ -2,7 +2,14 @@ export type Theme = 'system' | 'light' | 'dark';
 
 export const THEMES: Theme[] = ['system', 'light', 'dark'];
 
-const KEY = 'india2actual.theme.v1';
+export const THEME_LABELS: Record<Theme, string> = {
+  system: 'Auto',
+  light: 'Light',
+  dark: 'Dark',
+};
+
+// The site's own theme switch stores its choice under this name, so one choice covers both.
+const KEY = 'starlight-theme';
 
 type ThemeStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 

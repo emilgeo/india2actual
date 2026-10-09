@@ -210,7 +210,8 @@ test.describe('the convert page', () => {
 
 test.describe('the site header', () => {
   test('is left out of a page opened from disk', async ({ page }) => {
-    await expect(page.getByRole('navigation', { name: 'Site' })).toHaveCount(0);
+    await expect(page.locator('header.sitebar')).toHaveCount(0);
+    await expect(page.getByLabel('Theme')).toBeVisible();
   });
 
   test('links to the rest of the site when the page is served', async ({ page }) => {
@@ -219,13 +220,24 @@ test.describe('the site header', () => {
       route.fulfill({ body: html, contentType: 'text/html' }),
     );
     await page.goto('http://site.test/convert/');
-    const nav = page.getByRole('navigation', { name: 'Site' });
-    await expect(nav.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', '/docs/');
-    await expect(nav.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy/');
+    const header = page.locator('header.sitebar');
+    await expect(header.getByRole('link', { name: 'india2actual' })).toHaveAttribute('href', '/');
+    await expect(header.getByRole('link', { name: 'GitHub' })).toBeVisible();
+    await expect(header.getByLabel('Theme')).toHaveText(/Auto/);
     const footer = page.locator('footer');
+    await expect(footer.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', '/docs/');
+    await expect(footer.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy/');
     await expect(footer).toContainText('Made by an Actual Budget lover');
     await expect(footer.getByRole('link', { name: 'Report a problem' })).toBeVisible();
     await expect(footer.getByRole('link', { name: 'Fingerprint of this page' })).toBeVisible();
+  });
+
+  test('keeps the footer at the bottom of a short page', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 1600 });
+    const gap = await page.evaluate(
+      () => window.innerHeight - document.querySelector('footer')!.getBoundingClientRect().bottom,
+    );
+    expect(Math.abs(gap)).toBeLessThan(1);
   });
 
   test('keeps the footer free of site links when opened from disk', async ({ page }) => {

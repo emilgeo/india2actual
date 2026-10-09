@@ -25,34 +25,38 @@ import type { RuleRequest } from './push/actions.js';
 import type { Connection } from './push/types.js';
 import type { NameExtras } from './payee-review.js';
 import { SectionCard } from './section-card.js';
-import { THEMES, applyTheme, loadTheme, saveTheme } from './theme.js';
+import { THEMES, THEME_LABELS, applyTheme, loadTheme, saveTheme } from './theme.js';
 import type { Theme } from './theme.js';
 
 const storage = safeStorage();
 
-/** The site's links, shown only where the page is served as part of the site. */
-function SiteBar() {
+const served = location.protocol.startsWith('http');
+const showSiteHeader = served && !__PUSH__;
+
+const ICONS = {
+  github:
+    'M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z',
+  npm: 'M1.76 0h20.48a1.76 1.76 0 0 1 1.76 1.76v20.48a1.76 1.76 0 0 1-1.76 1.76H1.76A1.76 1.76 0 0 1 0 22.24V1.76A1.76 1.76 0 0 1 1.76 0zM5.11 19.16h6.93V8.8h3.47v10.36h3.47V5.34H5.13v13.82z',
+};
+
+function IconLink({ href, name, label }: { href: string; name: keyof typeof ICONS; label: string }) {
   return (
-    <nav class="sitebar" aria-label="Site">
-      <a class="sitebar-name" href="/">
-        india2actual
-      </a>
-      <a href="/docs/">Documentation</a>
-      <a href="/changelog/">Changelog</a>
-      <a href="/privacy/">Privacy</a>
-      <a href="https://github.com/emilgeo/india2actual">GitHub</a>
-      <a href="https://www.npmjs.com/package/india2actual">npm</a>
-    </nav>
+    <a href={href} class="icon-link" aria-label={label}>
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d={ICONS[name]} />
+      </svg>
+    </a>
   );
 }
 
-function ThemePicker() {
+function ThemePicker({ labelled }: { labelled: boolean }) {
   const [theme, setTheme] = useState<Theme>(() => loadTheme(storage));
   return (
     <div class="theme">
-      <label for="theme">Theme</label>
+      {labelled ? <label for="theme">Theme</label> : null}
       <select
         id="theme"
+        aria-label={labelled ? undefined : 'Theme'}
         value={theme}
         onChange={event => {
           const next = event.currentTarget.value as Theme;
@@ -62,10 +66,27 @@ function ThemePicker() {
         }}
       >
         {THEMES.map(name => (
-          <option value={name}>{name[0]?.toUpperCase()}{name.slice(1)}</option>
+          <option value={name}>{THEME_LABELS[name]}</option>
         ))}
       </select>
     </div>
+  );
+}
+
+/** The same header as the rest of the site, shown only where the page is served as part of it. */
+function SiteHeader() {
+  return (
+    <header class="sitebar">
+      <a class="sitebar-name" href="/">
+        india2actual
+      </a>
+      <div class="sitebar-right">
+        <IconLink href="https://github.com/emilgeo/india2actual" name="github" label="GitHub" />
+        <IconLink href="https://www.npmjs.com/package/india2actual" name="npm" label="npm" />
+        <span class="sitebar-divider" aria-hidden="true" />
+        <ThemePicker labelled={false} />
+      </div>
+    </header>
   );
 }
 
@@ -273,10 +294,10 @@ export function App() {
 
   return (
     <>
-      {!__PUSH__ && location.protocol.startsWith('http') ? <SiteBar /> : null}
+      {showSiteHeader ? <SiteHeader /> : null}
       <main>
         <header class="hero">
-          <ThemePicker />
+          {showSiteHeader ? null : <ThemePicker labelled />}
           <h1>india2actual</h1>
           <p>
             Turn an Indian bank or credit card statement into a file Actual Budget
@@ -504,23 +525,25 @@ export function App() {
             <code> --merchants </code> option.
           </p>
         </section>
-
-        <footer class="foot">
+      </main>
+      <footer class="foot">
+        <p>
           <span>india2actual {__VERSION__}</span>
           <span>Not affiliated with Actual Budget or any bank.</span>
           <span>Made by an Actual Budget lover.</span>
-          {location.protocol.startsWith('http') ? (
-            <>
-              <a href="SHA256SUMS">Fingerprint of this page</a>
-              <a href="/privacy/">Privacy</a>
-              <a href="/docs/">Documentation</a>
-              <a href="https://github.com/emilgeo/india2actual/issues">Report a problem</a>
-              <a href="https://github.com/emilgeo/india2actual/blob/main/LICENSE">Licence (MIT)</a>
-              <a href="https://github.com/emilgeo/india2actual/releases/latest">Downloads</a>
-            </>
-          ) : null}
-        </footer>
-      </main>
+        </p>
+        {served ? (
+          <nav aria-label="Footer">
+            <a href="SHA256SUMS">Fingerprint of this page</a>
+            <a href="/docs/">Documentation</a>
+            <a href="/changelog/">Changelog</a>
+            <a href="/privacy/">Privacy</a>
+            <a href="https://github.com/emilgeo/india2actual/issues">Report a problem</a>
+            <a href="https://github.com/emilgeo/india2actual/blob/main/LICENSE">Licence (MIT)</a>
+            <a href="https://github.com/emilgeo/india2actual/releases/latest">Downloads</a>
+          </nav>
+        ) : null}
+      </footer>
     </>
   );
 }

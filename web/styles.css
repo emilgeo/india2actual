@@ -12,6 +12,9 @@
   --bad: #a4262c;
   --bad-soft: #fbe3e4;
   --warn-soft: #fdf1d3;
+  --nav: #f3f2ee;
+  --nav-line: #efeeea;
+  --brand: #0f766e;
   --radius: 10px;
   color-scheme: light dark;
 }
@@ -31,6 +34,9 @@
     --bad: #ff8a8f;
     --bad-soft: #3d1a1c;
     --warn-soft: #3a2f12;
+    --nav: #1a1b20;
+    --nav-line: #101114;
+    --brand: #99f6e4;
     color-scheme: dark;
   }
 }
@@ -49,6 +55,9 @@
   --bad: #ff8a8f;
   --bad-soft: #3d1a1c;
   --warn-soft: #3a2f12;
+  --nav: #1a1b20;
+  --nav-line: #101114;
+  --brand: #99f6e4;
   color-scheme: dark;
 }
 
@@ -64,14 +73,30 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font:
+    16px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    'Noto Sans',
+    Arial,
+    sans-serif;
 }
 
 a {
   color: var(--accent);
 }
 
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 main {
+  flex: 1 0 auto;
+  width: 100%;
   max-width: 62rem;
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
@@ -87,29 +112,49 @@ h4 {
 
 .sitebar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 1.25rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
-  font-size: 0.9rem;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 4rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--nav-line);
+  background: var(--nav);
 }
 
-.sitebar a {
-  color: var(--ink-soft);
+.sitebar-name {
+  color: var(--brand);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
 }
 
-.sitebar a:hover {
-  color: var(--ink);
+.sitebar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.sitebar .sitebar-name {
-  margin-right: auto;
-  color: var(--ink);
-  font-weight: 600;
-  font-size: 1.05rem;
+.icon-link {
+  display: flex;
+  color: var(--brand);
+}
+
+.sitebar-divider {
+  align-self: stretch;
+  margin: 0.25rem 0;
+  border-inline-start: 1px solid var(--line);
+}
+
+.sitebar .theme {
+  float: none;
+}
+
+.sitebar .theme select {
+  border: 0;
+  background: transparent;
+  font-size: 0.875rem;
+  cursor: pointer;
 }
 
 .hero h1 {
@@ -472,10 +517,37 @@ select:focus-visible {
 .foot {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.5rem 1.5rem;
-  margin-top: 2rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--nav-line);
+  background: var(--nav);
   color: var(--ink-soft);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
+}
+
+.foot p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin: 0;
+}
+
+.foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin-inline-start: auto;
+}
+
+.foot a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.foot a:hover {
+  text-decoration: underline;
 }
 
 form.panel,
