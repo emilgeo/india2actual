@@ -67,6 +67,10 @@ body {
   font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
+a {
+  color: var(--accent);
+}
+
 main {
   max-width: 62rem;
   margin: 0 auto;

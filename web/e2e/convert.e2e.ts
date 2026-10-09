@@ -213,6 +213,13 @@ test.describe('the site header', () => {
     await expect(page.getByRole('navigation', { name: 'Site' })).toHaveCount(0);
   });
 
+  test('colours links with the theme, not the browser default', async ({ page }) => {
+    const colour = await page
+      .getByRole('link', { name: /india2actual.html/ })
+      .evaluate(link => getComputedStyle(link).color);
+    expect(colour).not.toBe('rgb(0, 0, 238)');
+  });
+
   test('links to the rest of the site when the page is served', async ({ page }) => {
     const html = readFileSync(join(root, 'dist-web', 'india2actual-convert.html'));
     await page.route('http://site.test/convert/', route =>
