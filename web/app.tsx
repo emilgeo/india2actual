@@ -30,6 +30,22 @@ import type { Theme } from './theme.js';
 
 const storage = safeStorage();
 
+/** The site's links, shown only where the page is served as part of the site. */
+function SiteBar() {
+  return (
+    <nav class="sitebar" aria-label="Site">
+      <a class="sitebar-name" href="/">
+        india2actual
+      </a>
+      <a href="/docs/">Documentation</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://github.com/emilgeo/india2actual">GitHub</a>
+      <a href="https://www.npmjs.com/package/india2actual">npm</a>
+    </nav>
+  );
+}
+
 function ThemePicker() {
   const [theme, setTheme] = useState<Theme>(() => loadTheme(storage));
   return (
@@ -256,244 +272,247 @@ export function App() {
   const ambiguous = results.some(({ sections }) => sections.some(datesAreAmbiguous));
 
   return (
-    <main>
-      <header class="hero">
-        <ThemePicker />
-        <h1>india2actual</h1>
-        <p>
-          Turn an Indian bank or credit card statement into a file Actual Budget
-          can import, with real payee names.
-        </p>
-        <p class="privacy">
-          Everything happens in this page. Your statement is not uploaded, and
-          this page is not allowed to make network requests.
-        </p>
-      </header>
+    <>
+      {!__PUSH__ && location.protocol.startsWith('http') ? <SiteBar /> : null}
+      <main>
+        <header class="hero">
+          <ThemePicker />
+          <h1>india2actual</h1>
+          <p>
+            Turn an Indian bank or credit card statement into a file Actual Budget
+            can import, with real payee names.
+          </p>
+          <p class="privacy">
+            Everything happens in this page. Your statement is not uploaded, and
+            this page is not allowed to make network requests.
+          </p>
+        </header>
 
-      <label
-        class="drop"
-        onDragOver={event => event.preventDefault()}
-        onDrop={event => {
-          event.preventDefault();
-          if (event.dataTransfer?.files.length) {
-            void addFiles(event.dataTransfer.files);
-          }
-        }}
-      >
-        <span class="drop-title">Drop statements here, or choose files</span>
-        <span class="muted">PDF, CSV, Excel, or an HTML table saved as .xls</span>
-        <input
-          type="file"
-          multiple
-          accept=".pdf,.csv,.tsv,.txt,.xls,.xlsx,.html,.htm"
-          onChange={event => {
-            const input = event.currentTarget as HTMLInputElement;
-            if (input.files?.length) {
-              void addFiles(input.files);
-              input.value = '';
+        <label
+          class="drop"
+          onDragOver={event => event.preventDefault()}
+          onDrop={event => {
+            event.preventDefault();
+            if (event.dataTransfer?.files.length) {
+              void addFiles(event.dataTransfer.files);
             }
           }}
-        />
-      </label>
-
-      {__PUSH__ ? (
-        <ConnectPanel
-          connection={connection}
-          onConnected={setConnection}
-          onDisconnected={() => setConnection(null)}
-        />
-      ) : (
-        <p class="muted">
-          To push straight into Actual instead of downloading a file, download{' '}
-          <a
-            href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual.html"
-            rel="noreferrer"
-          >
-            india2actual.html
-          </a>{' '}
-          from the latest release and open it from your computer.
-        </p>
-      )}
-
-      <details class="options">
-        <summary>Options</summary>
-        <label class="check">
+        >
+          <span class="drop-title">Drop statements here, or choose files</span>
+          <span class="muted">PDF, CSV, Excel, or an HTML table saved as .xls</span>
           <input
-            type="checkbox"
-            checked={startingBalance}
-            onChange={event =>
-              setStartingBalance((event.currentTarget as HTMLInputElement).checked)
-            }
-          />
-          Add a Starting Balance row (for the first import into a new account)
-        </label>
-        <label class="check">
-          <input
-            type="checkbox"
-            checked={forceCard}
-            onChange={event =>
-              setForceCard((event.currentTarget as HTMLInputElement).checked)
-            }
-          />
-          Read as a credit card statement
-        </label>
-        <label>
-          Dates like 01/02/2025 mean{' '}
-          <select
-            value={dateOrder}
-            onChange={event =>
-              setDateOrder((event.currentTarget as HTMLSelectElement).value as DateOrder)
-            }
-          >
-            <option value="dmy">day / month / year</option>
-            <option value="mdy">month / day / year</option>
-            <option value="ymd">year / month / day</option>
-          </select>
-        </label>
-      </details>
-
-      {ambiguous ? (
-        <p class="notice">
-          Every date in a statement could be read day-first or month-first.
-          Check the dates below, and change the setting under Options if they
-          are wrong.
-        </p>
-      ) : null}
-
-      <div aria-live="polite" class="messages">
-        {message ? <p class="notice">{message}</p> : null}
-      </div>
-      {reportText ? (
-        <section class="panel">
-          <p>Copying was not allowed here. Select and copy this instead:</p>
-          <textarea readOnly rows={10} value={reportText} />
-        </section>
-      ) : null}
-
-      {results.map(entry => {
-        const { file, sections } = entry;
-        return (
-          <section class="file" key={file.id} aria-label={file.name}>
-            <header class="file-head">
-              <h2>{file.name}</h2>
-              <span class="muted">{file.format ?? ''}</span>
-              <button
-                type="button"
-                class="link"
-                onClick={() => setFiles(files.filter(item => item.id !== file.id))}
-              >
-                Remove
-              </button>
-            </header>
-
-            {file.status === 'password' ? (
-              <PasswordPrompt
-                file={file}
-                onSubmit={password => void openWithPassword(file, password)}
-              />
-            ) : null}
-            {file.status === 'error' ? (
-              <p class="notice error">{file.error}</p>
-            ) : null}
-            {file.status === 'ready' && !sections.length ? (
-              <p class="notice error">
-                No transaction table was found in this file. If you report
-                this, the button below copies a report with every letter and
-                digit masked.
-              </p>
-            ) : null}
-            {sections.length > 1 ? (
-              <p class="muted">
-                This statement holds {sections.length} accounts. Each gets its
-                own file.
-              </p>
-            ) : null}
-
-            {sections.map((section, index) => (
-              <SectionCard
-                key={`${file.id}-${index}`}
-                file={file}
-                section={section}
-                number={index + 1}
-                several={sections.length > 1}
-                startingBalance={startingBalance}
-                excluded={excluded.get(sectionKey(file.id, index)) ?? new Set()}
-                renamed={renamedFor(file.id, index)}
-                onExclude={(row, out) => exclude(file.id, index, row, out)}
-                onName={(group, name, remember, extras) =>
-                  nameGroup(file.id, index, group, name, remember, extras)
-                }
-                connection={connection}
-                openAccountId={openAccountId}
-                categories={categoriesFor(file.id, index)}
-                ruleRequests={ruleRequests.get(sectionKey(file.id, index)) ?? []}
-              />
-            ))}
-
-            {file.status === 'ready' ? (
-              <button type="button" class="link" onClick={() => void copyReport(entry)}>
-                Copy a masked report for a bug report
-              </button>
-            ) : null}
-          </section>
-        );
-      })}
-
-      <section class="panel" aria-label="Saved payee names">
-        <h2>Your payee names</h2>
-        <p class="muted">
-          Names you give payees are kept in this browser only, so the next
-          statement uses them too. {rules.length} saved.
-        </p>
-        <div class="row">
-          <button
-            type="button"
-            class="button"
-            disabled={!rules.length}
-            onClick={() =>
-              downloadText('india2actual-names.json', rulesToJson(rules), 'application/json')
-            }
-          >
-            Download names
-          </button>
-          <label class="button">
-            Load names
-            <input
-              type="file"
-              accept=".json,application/json"
-              class="visually-hidden"
-              onChange={event => {
-                const input = event.currentTarget as HTMLInputElement;
-                void loadRulesFile(input.files);
+            type="file"
+            multiple
+            accept=".pdf,.csv,.tsv,.txt,.xls,.xlsx,.html,.htm"
+            onChange={event => {
+              const input = event.currentTarget as HTMLInputElement;
+              if (input.files?.length) {
+                void addFiles(input.files);
                 input.value = '';
-              }}
-            />
-          </label>
-          <button
-            type="button"
-            class="button"
-            disabled={!rules.length}
-            onClick={() => {
-              clearRules(storage);
-              setRulesState([]);
+              }
             }}
-          >
-            Clear saved names
-          </button>
-        </div>
-        <p class="muted">
-          The downloaded file also works with the command line tool&apos;s
-          <code> --merchants </code> option.
-        </p>
-      </section>
+          />
+        </label>
 
-      <footer class="foot">
-        <span>india2actual {__VERSION__}</span>
-        <span>Not affiliated with Actual Budget or any bank.</span>
-        {location.protocol.startsWith('http') ? (
-          <a href="SHA256SUMS">Fingerprint of this page</a>
+        {__PUSH__ ? (
+          <ConnectPanel
+            connection={connection}
+            onConnected={setConnection}
+            onDisconnected={() => setConnection(null)}
+          />
+        ) : (
+          <p class="muted">
+            To push straight into Actual instead of downloading a file, download{' '}
+            <a
+              href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual.html"
+              rel="noreferrer"
+            >
+              india2actual.html
+            </a>{' '}
+            from the latest release and open it from your computer.
+          </p>
+        )}
+
+        <details class="options">
+          <summary>Options</summary>
+          <label class="check">
+            <input
+              type="checkbox"
+              checked={startingBalance}
+              onChange={event =>
+                setStartingBalance((event.currentTarget as HTMLInputElement).checked)
+              }
+            />
+            Add a Starting Balance row (for the first import into a new account)
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              checked={forceCard}
+              onChange={event =>
+                setForceCard((event.currentTarget as HTMLInputElement).checked)
+              }
+            />
+            Read as a credit card statement
+          </label>
+          <label>
+            Dates like 01/02/2025 mean{' '}
+            <select
+              value={dateOrder}
+              onChange={event =>
+                setDateOrder((event.currentTarget as HTMLSelectElement).value as DateOrder)
+              }
+            >
+              <option value="dmy">day / month / year</option>
+              <option value="mdy">month / day / year</option>
+              <option value="ymd">year / month / day</option>
+            </select>
+          </label>
+        </details>
+
+        {ambiguous ? (
+          <p class="notice">
+            Every date in a statement could be read day-first or month-first.
+            Check the dates below, and change the setting under Options if they
+            are wrong.
+          </p>
         ) : null}
-      </footer>
-    </main>
+
+        <div aria-live="polite" class="messages">
+          {message ? <p class="notice">{message}</p> : null}
+        </div>
+        {reportText ? (
+          <section class="panel">
+            <p>Copying was not allowed here. Select and copy this instead:</p>
+            <textarea readOnly rows={10} value={reportText} />
+          </section>
+        ) : null}
+
+        {results.map(entry => {
+          const { file, sections } = entry;
+          return (
+            <section class="file" key={file.id} aria-label={file.name}>
+              <header class="file-head">
+                <h2>{file.name}</h2>
+                <span class="muted">{file.format ?? ''}</span>
+                <button
+                  type="button"
+                  class="link"
+                  onClick={() => setFiles(files.filter(item => item.id !== file.id))}
+                >
+                  Remove
+                </button>
+              </header>
+
+              {file.status === 'password' ? (
+                <PasswordPrompt
+                  file={file}
+                  onSubmit={password => void openWithPassword(file, password)}
+                />
+              ) : null}
+              {file.status === 'error' ? (
+                <p class="notice error">{file.error}</p>
+              ) : null}
+              {file.status === 'ready' && !sections.length ? (
+                <p class="notice error">
+                  No transaction table was found in this file. If you report
+                  this, the button below copies a report with every letter and
+                  digit masked.
+                </p>
+              ) : null}
+              {sections.length > 1 ? (
+                <p class="muted">
+                  This statement holds {sections.length} accounts. Each gets its
+                  own file.
+                </p>
+              ) : null}
+
+              {sections.map((section, index) => (
+                <SectionCard
+                  key={`${file.id}-${index}`}
+                  file={file}
+                  section={section}
+                  number={index + 1}
+                  several={sections.length > 1}
+                  startingBalance={startingBalance}
+                  excluded={excluded.get(sectionKey(file.id, index)) ?? new Set()}
+                  renamed={renamedFor(file.id, index)}
+                  onExclude={(row, out) => exclude(file.id, index, row, out)}
+                  onName={(group, name, remember, extras) =>
+                    nameGroup(file.id, index, group, name, remember, extras)
+                  }
+                  connection={connection}
+                  openAccountId={openAccountId}
+                  categories={categoriesFor(file.id, index)}
+                  ruleRequests={ruleRequests.get(sectionKey(file.id, index)) ?? []}
+                />
+              ))}
+
+              {file.status === 'ready' ? (
+                <button type="button" class="link" onClick={() => void copyReport(entry)}>
+                  Copy a masked report for a bug report
+                </button>
+              ) : null}
+            </section>
+          );
+        })}
+
+        <section class="panel" aria-label="Saved payee names">
+          <h2>Your payee names</h2>
+          <p class="muted">
+            Names you give payees are kept in this browser only, so the next
+            statement uses them too. {rules.length} saved.
+          </p>
+          <div class="row">
+            <button
+              type="button"
+              class="button"
+              disabled={!rules.length}
+              onClick={() =>
+                downloadText('india2actual-names.json', rulesToJson(rules), 'application/json')
+              }
+            >
+              Download names
+            </button>
+            <label class="button">
+              Load names
+              <input
+                type="file"
+                accept=".json,application/json"
+                class="visually-hidden"
+                onChange={event => {
+                  const input = event.currentTarget as HTMLInputElement;
+                  void loadRulesFile(input.files);
+                  input.value = '';
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              class="button"
+              disabled={!rules.length}
+              onClick={() => {
+                clearRules(storage);
+                setRulesState([]);
+              }}
+            >
+              Clear saved names
+            </button>
+          </div>
+          <p class="muted">
+            The downloaded file also works with the command line tool&apos;s
+            <code> --merchants </code> option.
+          </p>
+        </section>
+
+        <footer class="foot">
+          <span>india2actual {__VERSION__}</span>
+          <span>Not affiliated with Actual Budget or any bank.</span>
+          {location.protocol.startsWith('http') ? (
+            <a href="SHA256SUMS">Fingerprint of this page</a>
+          ) : null}
+        </footer>
+      </main>
+    </>
   );
 }

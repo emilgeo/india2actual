@@ -208,6 +208,23 @@ test.describe('the convert page', () => {
   });
 });
 
+test.describe('the site header', () => {
+  test('is left out of a page opened from disk', async ({ page }) => {
+    await expect(page.getByRole('navigation', { name: 'Site' })).toHaveCount(0);
+  });
+
+  test('links to the rest of the site when the page is served', async ({ page }) => {
+    const html = readFileSync(join(root, 'dist-web', 'india2actual-convert.html'));
+    await page.route('http://site.test/convert/', route =>
+      route.fulfill({ body: html, contentType: 'text/html' }),
+    );
+    await page.goto('http://site.test/convert/');
+    const nav = page.getByRole('navigation', { name: 'Site' });
+    await expect(nav.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', '/docs/');
+    await expect(nav.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy/');
+  });
+});
+
 test.describe('the theme', () => {
   const paper = (page: Page) =>
     page.evaluate(() => getComputedStyle(document.body).backgroundColor);
