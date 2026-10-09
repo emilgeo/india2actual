@@ -29,3 +29,59 @@
   --sl-color-accent: #0f766e;
   --sl-color-accent-high: #134e4a;
 }
+
+/* A footer that matches the header and stays at the bottom of short pages. */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.page {
+  flex: 1 0 auto;
+  min-height: 0;
+}
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding: 1rem var(--sl-nav-pad-x);
+  border-top: 1px solid var(--sl-color-hairline-shade);
+  background-color: var(--sl-color-bg-nav);
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-3);
+}
+
+.site-footer p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin: 0;
+}
+
+.site-footer nav {
+  margin-inline-start: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.site-footer a {
+  color: var(--sl-color-text-accent);
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
+/* The fixed sidebars end at the bottom of the screen, so lift the footer over them. */
+@media (min-width: 50em) {
+  .site-footer {
+    position: relative;
+    z-index: calc(var(--sl-z-index-menu) + 1);
+  }
+}
