@@ -17,6 +17,8 @@ All notable changes to this project are recorded here. The format follows
 - A merchants rule can now name a narration that has no name in it, such as a
   transfer to an account number. Write the pattern against the narration in
   lowercase with its digits removed.
+- The push file and the extension limit themselves to the one Actual server you
+  connect to for the rest of that visit.
 - The browser pages and the extension have a Theme choice (System, Light or
   Dark), remembered in the browser.
 - A browser version of the converter on the website. Drop a statement (PDF, CSV

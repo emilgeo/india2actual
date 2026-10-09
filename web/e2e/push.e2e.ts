@@ -101,6 +101,40 @@ test.describe('the push file', () => {
     ).toBeNull();
   });
 
+  test('limits the page to the server it connected to', async ({ page }) => {
+    await connect(page);
+
+    const reach = (target: string) =>
+      page.evaluate(async address => {
+        try {
+          await fetch(address, { mode: 'no-cors' });
+          return 'sent';
+        } catch {
+          return 'blocked';
+        }
+      }, target);
+
+    const other = new URL(server.url);
+    other.port = String(Number(other.port) + 1);
+    expect(await reach(`${server.url}/health`)).toBe('sent');
+    expect(await reach(other.origin)).toBe('blocked');
+    expect(await reach('https://example.com/')).toBe('blocked');
+  });
+
+  test('asks for a reload to use a different server', async ({ page }) => {
+    await connect(page);
+    await page.getByRole('button', { name: /Disconnect/ }).click();
+
+    const other = new URL(server.url);
+    other.port = String(Number(other.port) + 1);
+    await page.getByLabel('Server address').fill(other.origin);
+    await page.getByLabel('Server password').fill('anything');
+    await page.getByLabel('Sync ID', { exact: true }).fill(budget.syncId);
+    await page.getByRole('button', { name: 'Connect' }).click();
+
+    await expect(page.locator('.notice.error')).toContainText('Reload the page');
+  });
+
   test('refuses an http address that is not on this computer', async ({ page }) => {
     await page.getByLabel('Server address').fill('http://192.168.1.20:5006');
     await page.getByLabel('Server password').fill('anything');

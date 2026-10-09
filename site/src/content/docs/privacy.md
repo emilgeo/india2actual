@@ -26,7 +26,11 @@ The Convert page and `india2actual.html` read a statement inside the browser
 tab. The Convert page carries a security policy that forbids every network
 request, so it cannot send your statement anywhere, even by mistake. The
 downloadable file may reach an `https` server or one on your own computer, and
-nothing else.
+nothing else. Once you press Connect, it narrows itself further to the one
+server address you typed, for the rest of that visit. Using another server
+means reloading the page. This limits what a fault in a bundled library could
+do after that point; it does not replace checking the file's fingerprint, since
+the file itself decides to narrow.
 
 What they keep in your browser, on your computer only:
 
@@ -41,7 +45,8 @@ you close it.
 
 ## The Chrome extension
 
-It is the same page, shown in the browser's side panel. It asks for:
+It is the same page, shown in the browser's side panel, and it narrows itself
+to your server the same way. It asks for:
 
 - **Side panel**, to show the panel.
 - **Access to `localhost`**, so it can see which Actual account is open when

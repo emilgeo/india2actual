@@ -1,6 +1,7 @@
 import { describeConnectionError, checkServerAddress } from './address.js';
 import { isTokenRefused, signIn, SignInExpired } from './auth.js';
 import { loadApi } from './load-api.js';
+import { narrowNetwork } from './narrow.js';
 import type { Connection, WebApi } from './types.js';
 
 export type ConnectForm = {
@@ -22,6 +23,8 @@ export async function connect(form: ConnectForm): Promise<Connection> {
   if (!syncId) {
     throw new Error('Enter the Sync ID, under Settings, Show advanced settings.');
   }
+
+  narrowNetwork(new URL(checked.url).origin);
 
   let token = form.token;
   if (!token) {
