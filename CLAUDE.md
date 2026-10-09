@@ -126,6 +126,11 @@ npm --prefix site run build   # the same build CI runs
   rewritten to GitHub URLs, and `img.shields.io` badge images are stripped
   because they would be third-party requests. Keep the `Quick start` and
   `Supported banks` headings, since the landing page links to their anchors.
+- A branch's Convert page can go on the live site for testing: Actions, Site,
+  Run workflow, pick the branch. Only `/convert/` comes from the branch, every
+  other page is built from `main`. Running it again from `main`, or a push to
+  `main`, restores the released page. The `github-pages` environment must allow
+  all branches.
 - The site makes no third-party requests and has no analytics. Do not add
   external scripts, fonts or trackers.
 - The same rules apply as everywhere else: no real statement data, no em
