@@ -34,6 +34,7 @@ What they keep in your browser, on your computer only:
   from the page.
 - If you tick the box, your server address and Sync ID. Never a password.
 - Which Actual account each statement account goes to.
+- Your Theme choice (System, Light or Dark).
 
 Passwords you type, for a PDF or for Actual, stay in the page and are gone when
 you close it.

@@ -17,7 +17,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --paper: #101114;
     --panel: #1a1b20;
     --ink: #f2f1ed;
@@ -31,7 +31,29 @@
     --bad: #ff8a8f;
     --bad-soft: #3d1a1c;
     --warn-soft: #3a2f12;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --paper: #101114;
+  --panel: #1a1b20;
+  --ink: #f2f1ed;
+  --ink-soft: #9a9ca6;
+  --line: #2f3037;
+  --accent: #14b8a6;
+  --accent-ink: #04201d;
+  --accent-soft: #0b3b38;
+  --good: #5fd3ad;
+  --good-soft: #0f3326;
+  --bad: #ff8a8f;
+  --bad-soft: #3d1a1c;
+  --warn-soft: #3a2f12;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 * {
@@ -66,6 +88,24 @@ h4 {
 .hero p {
   margin: 0.5rem 0 0;
   max-width: 42rem;
+}
+
+.theme {
+  float: right;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.theme select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
 }
 
 .privacy {

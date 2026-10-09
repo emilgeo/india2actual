@@ -17,6 +17,8 @@ All notable changes to this project are recorded here. The format follows
 - A merchants rule can now name a narration that has no name in it, such as a
   transfer to an account number. Write the pattern against the narration in
   lowercase with its digits removed.
+- The browser pages and the extension have a Theme choice (System, Light or
+  Dark), remembered in the browser.
 - A browser version of the converter on the website. Drop a statement (PDF, CSV
   or Excel), check it, name unclear payees, and download one file per account.
   Nothing is uploaded, and the page cannot make network requests.

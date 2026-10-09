@@ -208,6 +208,31 @@ test.describe('the convert page', () => {
   });
 });
 
+test.describe('the theme', () => {
+  const paper = (page: Page) =>
+    page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+
+  test('follows the system, and a saved choice wins over it', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    const dark = await paper(page);
+    await page.getByLabel('Theme').selectOption('light');
+    const light = await paper(page);
+    expect(light).not.toBe(dark);
+    await page.reload();
+    await expect(page.getByLabel('Theme')).toHaveValue('light');
+    expect(await paper(page)).toBe(light);
+    await page.getByLabel('Theme').selectOption('system');
+    expect(await paper(page)).toBe(dark);
+  });
+
+  test('dark can be chosen on a light system', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    const light = await paper(page);
+    await page.getByLabel('Theme').selectOption('dark');
+    expect(await paper(page)).not.toBe(light);
+  });
+});
+
 test.describe('the network policy', () => {
   test('carries a policy that forbids every request', async ({ page }) => {
     const policy = await page

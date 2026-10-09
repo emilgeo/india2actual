@@ -25,8 +25,33 @@ import type { RuleRequest } from './push/actions.js';
 import type { Connection } from './push/types.js';
 import type { NameExtras } from './payee-review.js';
 import { SectionCard } from './section-card.js';
+import { THEMES, applyTheme, loadTheme, saveTheme } from './theme.js';
+import type { Theme } from './theme.js';
 
 const storage = safeStorage();
+
+function ThemePicker() {
+  const [theme, setTheme] = useState<Theme>(() => loadTheme(storage));
+  return (
+    <div class="theme">
+      <label for="theme">Theme</label>
+      <select
+        id="theme"
+        value={theme}
+        onChange={event => {
+          const next = event.currentTarget.value as Theme;
+          setTheme(next);
+          applyTheme(next);
+          saveTheme(storage, next);
+        }}
+      >
+        {THEMES.map(name => (
+          <option value={name}>{name[0]?.toUpperCase()}{name.slice(1)}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 function PasswordPrompt({
   file,
@@ -233,6 +258,7 @@ export function App() {
   return (
     <main>
       <header class="hero">
+        <ThemePicker />
         <h1>india2actual</h1>
         <p>
           Turn an Indian bank or credit card statement into a file Actual Budget
