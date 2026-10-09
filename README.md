@@ -71,6 +71,66 @@ If you use it often, install it so you can drop the `npx`:
 npm install -g india2actual
 ```
 
+## No terminal? Use the browser version
+
+The website has a Convert page (the link at the top of this page leads to the
+website). Drop a statement into it, check the result, give any unclear payee a
+name, and download a file to import into Actual. A PDF, CSV or Excel file works,
+and a password protected PDF asks for its password.
+
+It does the same job as the command line and gives the same file. Your
+statement is read inside the page and is never uploaded: the page carries a
+security policy that forbids any network request, so it could not send it
+anywhere even by mistake. Names you give payees are saved in your browser only,
+and you can download them as a file that the command line reads too.
+
+### Pushing from the browser
+
+To skip the import step too, download `india2actual.html` from the
+[latest release](https://github.com/emilgeo/india2actual/releases/latest) and
+open it from your computer. It is the same page with a connection to your Actual
+server added, so it has to be a separate file: the Convert page is forbidden
+from making any network request, and this one may reach only an `https` server
+or one on your own computer, nothing else.
+
+Enter your server address, its password and the budget's Sync ID (Settings, Show
+advanced settings). Then for each account in a statement choose the Actual
+account it belongs to, press Preview to see how many rows are new and how many
+already exist, and press Push. The page remembers your choice for next time.
+Afterwards it compares the statement's closing balance with the account's balance
+in Actual, and one click undoes the import. You can also give a payee a category
+and have Actual remember it as a rule, send card payments as transfers, and
+pick payees you already have in Actual from a list.
+
+### A side panel in Chrome
+
+The same push page is also available as a Chrome extension that opens in the
+browser's side panel, next to Actual, so everything stays in one window. Open an
+account in Actual and the panel preselects that account for the statement you
+drop in. Each release has `india2actual-extension.zip`. It is not in the Chrome
+Web Store, so unzip it, open `chrome://extensions`, turn on Developer mode,
+choose Load unpacked and pick the folder, then click the toolbar icon.
+
+To avoid typing the server password each time, tick Stay connected on this
+device. The extension then keeps a sign-in token, never the password, and next
+time you press Connect with the password box empty. Forget saved sign-in deletes
+it, and if the server stops accepting the token the panel asks for the password
+again. This uses a sign-in that Actual's own app uses but does not document, so
+a future Actual release could change it. In the version this was built against,
+a token does not expire unless the server is set to expire it, and it sits in the
+extension's storage in your browser profile, so anyone with access to that
+profile could use it. The downloadable page never keeps a sign-in.
+
+It asks for little: the side panel itself, access to `localhost`, and, when you
+connect, optional access to the address of your own Actual server so it can see
+which account is open. It reads only the address of that tab. The website's
+Privacy page has the details.
+
+Passwords stay in the page and are gone when you close it. Actual's browser
+support is marked experimental by Actual itself, and each file is built for one
+Actual release, so the page warns when your server runs a different one. Every
+release lists a fingerprint for each file in `SHA256SUMS`.
+
 ## Skip the import step
 
 If you run an Actual sync server, the tool can send transactions straight into
@@ -139,6 +199,18 @@ india2actual statement.csv --merchants my-merchants.json
 Write patterns in lowercase with no spaces or dots. They are matched against
 the UPI ID (the part before the `@`) or the merchant name. Your rules win over
 the built-in ones.
+
+You do not have to guess the patterns. After each run the tool lists the
+payees it was least sure about, most frequent first, with a rule to start from.
+Copy the rule into your file and fill in the name:
+
+```
+3 payee name(s) covering 5 row(s) may be worth naming. A rule in a --merchants file does it:
+  3 x 9876543210@ybl  {"pattern":"^9876543210","name":""}
+```
+
+For a narration that has no name in it at all, such as a transfer to an account
+number, the pattern is the narration in lowercase with its digits removed.
 
 Two cases where rules are especially useful:
 
@@ -340,6 +412,7 @@ real statement.
 | `--dry-run`                  | With `--push`, report what would change without writing.                                                    |
 | `--transfer-to <account>`    | With `--push`, send card payments as transfers with this account. See [above](#card-payments-as-transfers). |
 | `--section <n>`              | For a statement with several accounts, handle only the nth. Required with `--push`. See [above](#statements-with-several-accounts). |
+| `--starting-balance`         | Add a `Starting Balance` row for the balance before the first transaction, for a first import. Bank statements only, and only when the statement shows that balance. |
 | `--force`                    | Write even if the balance check fails.                                                                      |
 | `--quiet`                    | Only report problems.                                                                                       |
 | `--debug-layout`             | Print a report on how the file was read, safe to paste into an issue, and write nothing.                    |

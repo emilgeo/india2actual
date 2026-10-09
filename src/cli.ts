@@ -9,19 +9,18 @@ import {
   interpretConvertedOutput,
   isConvertedOutput,
 } from './interpret/roundtrip.js';
+import { checksFor } from './interpret/checks.js';
+import { startingBalanceRow } from './interpret/opening.js';
+import { payeeGroups } from './interpret/payees.js';
+import type { StatementTransaction } from './interpret/rows.js';
 import { interpretSections } from './interpret/sections.js';
 import type { Section } from './interpret/sections.js';
-import {
-  validateBalances,
-  validateCardTotals,
-  validateSectionTotals,
-} from './interpret/validate.js';
-import type { Validation } from './interpret/validate.js';
 import type { DateOrder } from './interpret/values.js';
 import { loadMerchantRules } from './merchants-file.js';
 import type { MerchantRule } from './narration/merchants.js';
 import { toCsv, writeCsv } from './out/csv.js';
 import { nodeTooOldForPush, pushTransactions } from './out/push.js';
+import { connectNode } from './out/push-node.js';
 import type { PushConfig } from './out/push.js';
 import { buildReport } from './report.js';
 
@@ -47,6 +46,9 @@ Options:
   --section <n>         For a statement that holds several accounts, handle only
                         the nth. Without it each account gets its own CSV.
                         Required with --push.
+  --starting-balance    Add a Starting Balance row for the balance before the
+                        first transaction, for a first import. Bank statements
+                        only, and only when the statement shows that balance.
   --debug-layout        Print a report on how the file was read, with all text
                         masked so it is safe to paste into an issue, and write
                         nothing.
@@ -89,6 +91,7 @@ type Options = {
   merchants?: string;
   card: boolean;
   section?: number;
+  startingBalance: boolean;
   debugLayout: boolean;
   force: boolean;
   quiet: boolean;
@@ -111,6 +114,7 @@ function parseArgs(args: string[]): Options | null {
     force: false,
     quiet: false,
     card: false,
+    startingBalance: false,
     debugLayout: false,
     push: false,
     dryRun: false,
@@ -174,6 +178,9 @@ function parseArgs(args: string[]): Options | null {
         options.section = value;
         break;
       }
+      case '--starting-balance':
+        options.startingBalance = true;
+        break;
       case '--debug-layout':
         options.debugLayout = true;
         break;
@@ -297,7 +304,7 @@ async function run(args: string[]): Promise<number> {
     stdout.write(
       buildReport({
         version: packageVersion(),
-        node: versions.node,
+        runtime: `Node ${versions.node}`,
         format: describeFormat(format),
         tables,
         sections: interpretSections(tables, interpretOptions).map(
@@ -402,33 +409,30 @@ async function run(args: string[]): Promise<number> {
   return exitCode;
 }
 
-/** The independent checks that apply to a section, in the order they run. */
-function checksFor(
-  section: Section,
-): Array<{ name: string; unit: string; validation: Validation }> {
-  const { transactions, card } = section.result;
-  const checks = [
-    {
-      name: card ? 'Statement totals check' : 'Balance check',
-      unit: card ? 'totals' : 'rows',
-      validation: card
-        ? validateCardTotals(transactions, section.table.figures)
-        : validateBalances(transactions),
-    },
-  ];
-
-  if (!card) {
-    const totals = validateSectionTotals(transactions, section.table.totals);
-    if (totals.status !== 'skipped') {
-      checks.push({
-        name: 'Printed totals check',
-        unit: 'totals',
-        validation: totals,
-      });
-    }
+/** Tell the user which payees are guesses, with a rule to start from. */
+function logUnclearPayees(
+  transactions: StatementTransaction[],
+  log: (message: string) => void,
+): void {
+  const groups = payeeGroups(transactions);
+  if (!groups.length) {
+    return;
   }
 
-  return checks;
+  const rows = groups.reduce((sum, group) => sum + group.count, 0);
+  log(
+    `${groups.length} payee name(s) covering ${rows} row(s) may be worth ` +
+      'naming. A rule in a --merchants file does it:',
+  );
+  for (const group of groups.slice(0, 10)) {
+    const rule = group.rule
+      ? `  ${JSON.stringify({ pattern: group.rule, name: '' })}`
+      : '';
+    log(`  ${group.count} x ${group.payee}${rule}`);
+  }
+  if (groups.length > 10) {
+    log(`  and ${groups.length - 10} more`);
+  }
 }
 
 type SectionContext = {
@@ -523,8 +527,27 @@ async function handleSection(
     }
   }
 
+  logUnclearPayees(transactions, log);
+
+  let rows = transactions;
+  if (options.startingBalance) {
+    const opening = card ? null : startingBalanceRow(section);
+    if (opening) {
+      rows = [opening, ...transactions];
+      log(
+        `Added a Starting Balance row of ${opening.amount.toFixed(2)} on ` +
+          `${opening.date}.`,
+      );
+    } else {
+      log(
+        'No Starting Balance row: the statement does not show the balance ' +
+          'before its first transaction, or it was zero.',
+      );
+    }
+  }
+
   if (pushConfig) {
-    const result = await pushTransactions(transactions, pushConfig);
+    const result = await pushTransactions(rows, pushConfig, connectNode);
 
     const verb = result.dryRun ? 'would add' : 'added';
     const alsoVerb = result.dryRun ? 'would update' : 'updated';
@@ -557,11 +580,11 @@ async function handleSection(
   }
 
   if (options.useStdout) {
-    stdout.write(toCsv(transactions));
+    stdout.write(toCsv(rows));
     return 0;
   }
 
-  await writeCsv(outPath, transactions);
+  await writeCsv(outPath, rows);
   log(`Wrote ${outPath}`);
 
   return 0;

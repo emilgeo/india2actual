@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 import { parse } from 'node-html-parser';
 import type { HTMLElement } from 'node-html-parser';
 
@@ -98,9 +96,4 @@ export function tableFromHtml(html: string, path = 'inline'): Table {
   }
 
   return { rows: best, source: { path, format: 'xlsx', part: 'html-table' } };
-}
-
-export async function extractHtmlTable(path: string): Promise<Table> {
-  const contents = await readFile(path, 'utf8');
-  return tableFromHtml(contents, path);
 }

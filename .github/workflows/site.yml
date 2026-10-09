@@ -5,16 +5,30 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      - 'web/**'
+      - 'src/**'
+      - 'scripts/build-web.mjs'
+      - 'package-lock.json'
       - 'README.md'
       - 'CHANGELOG.md'
       - '.github/workflows/site.yml'
   pull_request:
     paths:
       - 'site/**'
+      - 'web/**'
+      - 'src/**'
+      - 'scripts/build-web.mjs'
+      - 'package-lock.json'
       - 'README.md'
       - 'CHANGELOG.md'
       - '.github/workflows/site.yml'
+  # Run by hand from the Actions tab to try a branch's Convert page on the live
+  # site. Only /convert/ comes from the branch you pick. Every other page is
+  # built from main, so nothing else on the site changes. Running it again from
+  # main, or pushing to main, puts the released Convert page back.
   workflow_dispatch:
+
+run-name: Site (${{ github.ref_name }})
 
 permissions:
   contents: read
@@ -23,8 +37,31 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the repository
+      - name: Check out the site pages
         uses: actions/checkout@v7
+        with:
+          # A hand run takes its pages from main whichever branch it was run on.
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
+      - name: Check out the branch whose Convert page is being tried
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          path: try
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Build the convert page into the site
+        env:
+          PAGE_DIR: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' && 'try' || '.' }}
+        run: |
+          (cd "$PAGE_DIR" && npm ci && npm run build:web)
+          mkdir -p site/public/convert
+          cp "$PAGE_DIR/dist-web/india2actual-convert.html" site/public/convert/index.html
+          cd site/public/convert
+          sha256sum index.html > SHA256SUMS
       - name: Install, build and upload the site
         uses: withastro/action@v6
         with:

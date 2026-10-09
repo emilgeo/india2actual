@@ -6,10 +6,12 @@ import {
   findExistingCounterparts,
   isCardPayment,
   nodeTooOldForPush,
+  pushTransactions,
   resolveAccount,
   toImportEntities,
   toPaise,
 } from './push.js';
+import type { ActualApi, PushConfig } from './push.js';
 
 function transaction(
   overrides: Partial<StatementTransaction> = {},
@@ -236,5 +238,128 @@ describe('nodeTooOldForPush', () => {
     for (const version of ['22.14.0', '22.23.3', '24.1.0', '25.0.0']) {
       expect(nodeTooOldForPush(version)).toBe(false);
     }
+  });
+});
+
+describe('pushTransactions with a supplied connector', () => {
+  const config: PushConfig = {
+    serverURL: 'https://actual.example.test',
+    password: 'not-a-real-password',
+    syncId: 'sync-1',
+    account: 'Acme Savings',
+    dryRun: false,
+  };
+
+  /** A stand-in for the Actual API that records what it is asked to do. */
+  function fakeApi() {
+    const calls: string[] = [];
+    const imported: Array<{ accountId: string; rows: unknown[]; opts: unknown }> =
+      [];
+    const api: ActualApi = {
+      init: async () => {
+        calls.push('init');
+      },
+      downloadBudget: async () => {
+        calls.push('download');
+      },
+      getAccounts: async () => [
+        { id: 'a1', name: 'Acme Savings' },
+        { id: 'a2', name: 'Acme Card' },
+      ],
+      getPayees: async () => [
+        { id: 'p-card', name: 'Acme Card', transfer_acct: 'a2' },
+      ],
+      getTransactions: async () => [],
+      importTransactions: async (accountId, rows, opts) => {
+        calls.push('import');
+        imported.push({ accountId, rows, opts });
+        return { added: rows.map((_, index) => `id${index}`), updated: [] };
+      },
+      shutdown: async () => {
+        calls.push('shutdown');
+      },
+    };
+    return { api, calls, imported };
+  }
+
+  it('imports into the named account and shuts the connection down', async () => {
+    const { api, calls, imported } = fakeApi();
+
+    const result = await pushTransactions(
+      [transaction({ ref: '412345678901' })],
+      config,
+      async () => api,
+    );
+
+    expect(result).toMatchObject({ accountName: 'Acme Savings', added: 1 });
+    expect(imported[0]?.accountId).toBe('a1');
+    expect(imported[0]?.rows).toEqual([
+      expect.objectContaining({ amount: -45050, imported_id: '412345678901' }),
+    ]);
+    expect(calls).toEqual(['download', 'import', 'shutdown']);
+  });
+
+  it('passes a dry run through so nothing is written', async () => {
+    const { api, imported } = fakeApi();
+
+    await pushTransactions(
+      [transaction()],
+      { ...config, dryRun: true },
+      async () => api,
+    );
+
+    expect(imported[0]?.opts).toMatchObject({ dryRun: true });
+  });
+
+  it('shuts down even when the account does not exist', async () => {
+    const { api, calls } = fakeApi();
+
+    await expect(
+      pushTransactions(
+        [transaction()],
+        { ...config, account: 'No Such Account' },
+        async () => api,
+      ),
+    ).rejects.toThrow(/No account matching/);
+
+    expect(calls).toContain('shutdown');
+    expect(calls).not.toContain('import');
+  });
+
+  it('sends a card payment to the other account as a transfer', async () => {
+    const { api, imported } = fakeApi();
+
+    await pushTransactions(
+      [transaction({ payee: 'Credit Card Autopay', amount: -1500 })],
+      { ...config, transferTo: 'Acme Card' },
+      async () => api,
+    );
+
+    expect(imported[0]?.rows).toEqual([
+      expect.objectContaining({ payee: 'p-card', amount: -150000 }),
+    ]);
+  });
+
+  it('sends a Starting Balance row like any other, without a reference', async () => {
+    const { api, imported } = fakeApi();
+
+    await pushTransactions(
+      [
+        transaction({
+          payee: 'Starting Balance',
+          raw: 'Opening balance from the statement',
+          amount: 10000,
+        }),
+      ],
+      config,
+      async () => api,
+    );
+
+    const [row] = imported[0]?.rows ?? [];
+    expect(row).toMatchObject({
+      payee_name: 'Starting Balance',
+      amount: 1000000,
+    });
+    expect(row).not.toHaveProperty('imported_id');
   });
 });

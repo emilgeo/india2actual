@@ -24,14 +24,14 @@ const OLE2_MAGIC = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
 /** `%PDF-`. */
 const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46, 0x2d];
 
-function startsWithBytes(buffer: Buffer, magic: number[]): boolean {
+function startsWithBytes(buffer: Uint8Array, magic: number[]): boolean {
   if (buffer.length < magic.length) {
     return false;
   }
   return magic.every((byte, index) => buffer[index] === byte);
 }
 
-export function detectFormat(buffer: Buffer): DetectedFormat {
+export function detectFormat(buffer: Uint8Array): DetectedFormat {
   if (startsWithBytes(buffer, ZIP_MAGIC)) {
     return 'xlsx';
   }
@@ -44,7 +44,7 @@ export function detectFormat(buffer: Buffer): DetectedFormat {
 
   // Only the head matters, and only as text. A binary file decoded this way
   // produces junk that matches none of the patterns below, which is fine.
-  const head = buffer.subarray(0, 4096).toString('utf8').toLowerCase();
+  const head = new TextDecoder().decode(buffer.subarray(0, 4096)).toLowerCase();
 
   // Excel 2003 XML declares this namespace. Checked before the HTML test
   // because such files can also contain table-ish markup.

@@ -6,6 +6,43 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Added
+
+- After each run the tool lists the payee names it was least sure about, most
+  frequent first, with a rule to start from for a `--merchants` file.
+- `--starting-balance` adds a `Starting Balance` row for the balance before the
+  first transaction, so a first import leaves Actual agreeing with the bank.
+  It needs the statement to show that balance, and is not offered for credit
+  cards.
+- A merchants rule can now name a narration that has no name in it, such as a
+  transfer to an account number. Write the pattern against the narration in
+  lowercase with its digits removed.
+- The push file and the extension limit themselves to the one Actual server you
+  connect to for the rest of that visit.
+- The browser pages and the extension have a Theme choice (System, Light or
+  Dark), remembered in the browser.
+- A browser version of the converter on the website. Drop a statement (PDF, CSV
+  or Excel), check it, name unclear payees, and download one file per account.
+  Nothing is uploaded, and the page cannot make network requests.
+- `india2actual.html`, attached to each release, is the same page with a
+  connection to your Actual server. Choose an Actual account for each statement
+  account, preview what an import would do, push, see the closing balance checked
+  against Actual's, and undo the import. Payees can be given a category, with an
+  Actual rule so it is remembered, and card payments can be sent as transfers.
+- A Chrome side panel extension, `india2actual-extension.zip` on each release.
+  It is the push page beside Actual, and it preselects the account you have open
+  in Actual for the statement you drop in.
+- The extension can stay connected: tick Stay connected on this device and it
+  keeps a sign-in token, never the password, so the next connection needs one
+  click. Forget saved sign-in removes it, and a token the server no longer
+  accepts falls back to asking for the password.
+- A Privacy page on the website that says what each part does with your data.
+
+### Fixed
+
+- Warnings about image streams in a PDF that cannot be decoded are no longer
+  printed. They never affected the text.
+
 ## 0.4.0 - 2026-10-07
 
 ### Added

@@ -13,6 +13,21 @@ export type NarrationKind =
   | 'atm'
   | 'other';
 
+/**
+ * Which link of the payee fallback chain produced the name. `vpa`, `single`,
+ * `account`, `mandate` and `raw` are guesses a person may want to correct.
+ */
+export type PayeeSource =
+  | 'merchant'
+  | 'posting'
+  | 'atm'
+  | 'name'
+  | 'vpa'
+  | 'single'
+  | 'account'
+  | 'mandate'
+  | 'raw';
+
 export type ParsedNarration = {
   kind: NarrationKind;
 
@@ -35,4 +50,13 @@ export type ParsedNarration = {
 
   /** The narration exactly as the bank wrote it. */
   raw: string;
+
+  /** Which link of the fallback chain named the payee. */
+  source: PayeeSource;
+
+  /**
+   * The pattern a merchant rule would use to catch this narration and others
+   * like it. Empty when the narration offers nothing stable to match on.
+   */
+  rule: string;
 };

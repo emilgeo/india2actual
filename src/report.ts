@@ -14,7 +14,8 @@ export type ReportSection = {
 
 export type ReportInput = {
   version: string;
-  node: string;
+  /** What ran it, for example `Node 24.1.0` or `browser`. */
+  runtime: string;
   /** What the file was detected as, for example `PDF`. */
   format: string;
   /** Every table found, including any that are not a transaction table. */
@@ -189,7 +190,7 @@ export function buildReport(input: ReportInput): string {
   const { tables, sections } = input;
   const [first] = tables;
   const lines: string[] = [
-    `india2actual ${input.version} layout report (Node ${input.node})`,
+    `india2actual ${input.version} layout report (${input.runtime})`,
     'Letters are shown as x and digits as 9. Only column labels are ' +
       'written out. The length of text and the size of amounts stay visible.',
     '',

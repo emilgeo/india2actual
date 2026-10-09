@@ -71,6 +71,9 @@ npm test          # vitest, runs once and exits
 npm run typecheck # tsc --noEmit
 npm run build     # tsc, emits dist/
 npm run dev -- statement.csv   # run the CLI from source
+npm run build:web # builds the browser pages into dist-web/ (convert and push)
+npm run build:extension # builds dist-extension/ and its zip from web/
+npm run test:web  # Playwright tests of the pages and extension; needs Chromium
 ```
 
 Node 22.14 or newer. ESM only (`"type": "module"`), so relative imports need the
@@ -87,7 +90,14 @@ optional properties cannot be assigned `undefined` explicitly.
 | `src/narration`   | Parse the narration into a payee; the merchant map           |
 | `src/out`         | Write CSV, or push via `@actual-app/api`                     |
 | `src/env-file.ts` | Load settings from `.env`                                    |
+| `web/`            | Browser converter (Preact), built to one HTML file           |
+| `extension/`      | Chrome side panel wrapper around `web/`, see `scripts/`      |
 | `site/`           | Public website (Astro Starlight), see the Website section    |
+
+Code in `src/` that `web/` imports (extract, interpret, narration, report,
+`out/csv-text.ts`) must stay free of Node APIs, so a browser can bundle it. File
+and process access lives in `cli.ts`, `env-file.ts`, `merchants-file.ts`,
+`extract/index.ts`, `out/csv.ts` and `out/push-node.ts`.
 
 Formats are detected by **inspecting file contents, not the extension**,
 because Indian banks routinely name an HTML table `.xls`.
@@ -116,6 +126,11 @@ npm --prefix site run build   # the same build CI runs
   rewritten to GitHub URLs, and `img.shields.io` badge images are stripped
   because they would be third-party requests. Keep the `Quick start` and
   `Supported banks` headings, since the landing page links to their anchors.
+- A branch's Convert page can go on the live site for testing: Actions, Site,
+  Run workflow, pick the branch. Only `/convert/` comes from the branch, every
+  other page is built from `main`. Running it again from `main`, or a push to
+  `main`, restores the released page. The `github-pages` environment must allow
+  all branches.
 - The site makes no third-party requests and has no analytics. Do not add
   external scripts, fonts or trackers.
 - The same rules apply as everywhere else: no real statement data, no em

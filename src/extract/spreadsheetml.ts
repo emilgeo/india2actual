@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 import { XMLParser } from 'fast-xml-parser';
 
 import type { Table } from './types.js';
@@ -105,9 +103,4 @@ export function tableFromSpreadsheetMl(xml: string, path = 'inline'): Table {
       part: best ? `${best.name} (SpreadsheetML)` : 'SpreadsheetML',
     },
   };
-}
-
-export async function extractSpreadsheetMl(path: string): Promise<Table> {
-  const contents = await readFile(path, 'utf8');
-  return tableFromSpreadsheetMl(contents, path);
 }

@@ -1,6 +1,15 @@
-import { lookupMerchant, lookupPosting } from './merchants.js';
+import {
+  lookupMerchant,
+  lookupPosting,
+  lookupUserRule,
+  normalizeForLookup,
+} from './merchants.js';
 import type { MerchantRule } from './merchants.js';
-import type { NarrationKind, ParsedNarration } from './types.js';
+import type {
+  NarrationKind,
+  ParsedNarration,
+  PayeeSource,
+} from './types.js';
 
 /**
  * A VPA as it appears as a standalone token, e.g. `swiggy@ybl`,
@@ -623,6 +632,32 @@ function isDividend(rest: string[]): boolean {
   return rest.some(word => /^div(idend)?$/i.test(word));
 }
 
+/**
+ * The pattern a merchant rule needs to catch this narration and others like
+ * it. Follows the order the chain looks things up in: the VPA's local part,
+ * then the name, then, for a narration with neither, the narration itself with
+ * its digits removed, since a reference number differs every time.
+ */
+function ruleFor({
+  vpa,
+  candidate,
+  raw,
+}: {
+  vpa: string | undefined;
+  candidate: string | null;
+  raw: string;
+}): string {
+  const fromVpa = vpa ? normalizeForLookup(vpa.split('@')[0] ?? '') : '';
+  if (fromVpa) {
+    return `^${fromVpa}`;
+  }
+  const fromName = candidate ? normalizeForLookup(candidate) : '';
+  if (fromName) {
+    return `^${fromName}`;
+  }
+  return normalizeForLookup(raw.replace(/\d+/g, ''));
+}
+
 export type ParseNarrationOptions = {
   /** User-supplied merchant rules; these take precedence over built-ins. */
   merchantRules?: MerchantRule[];
@@ -648,15 +683,21 @@ export function parseNarration(
   const kind = detectKind(tokens);
   const candidate = pickCandidate(withoutVpas(tokens), phraseMode);
 
-  // Parenthesised deliberately: `a ?? b || c` is a syntax error in JS.
-  const merchant =
-    resolveMerchant({ vpa, candidate, rules, kind, raw: trimmed, tokens }) ??
-    (trimmed || 'Unknown');
+  const resolved = resolveMerchant({
+    vpa,
+    candidate,
+    rules,
+    kind,
+    raw: trimmed,
+    tokens,
+  });
 
   return {
     kind,
-    merchant,
+    merchant: resolved?.name ?? (trimmed || 'Unknown'),
     raw: trimmed,
+    source: resolved?.source ?? 'raw',
+    rule: ruleFor({ vpa, candidate, raw: trimmed }),
     ...(vpa ? { vpa } : {}),
     ...(ref ? { ref } : {}),
   };
@@ -676,20 +717,20 @@ function resolveMerchant({
   kind: NarrationKind;
   raw: string;
   tokens: string[];
-}): string | null {
+}): { name: string; source: PayeeSource } | null {
   // A mapped merchant is the strongest signal, and the VPA is the most stable
   // thing to map on, since it survives spelling changes in the name field.
   if (vpa) {
     const mapped = lookupMerchant(vpa.split('@')[0] ?? '', rules);
     if (mapped) {
-      return mapped;
+      return { name: mapped, source: 'merchant' };
     }
   }
 
   if (candidate) {
     const mapped = lookupMerchant(candidate, rules);
     if (mapped) {
-      return mapped;
+      return { name: mapped, source: 'merchant' };
     }
   }
 
@@ -699,14 +740,14 @@ function resolveMerchant({
   // otherwise be title-cased into a payee.
   const posting = lookupPosting(raw);
   if (posting) {
-    return posting;
+    return { name: posting, source: 'posting' };
   }
 
   // A cash withdrawal has no payee. Without this the leftover token is
   // usually the ATM's location, which makes every withdrawal a new payee,
   // exactly the problem this tool exists to fix.
   if (kind === 'atm') {
-    return 'ATM Withdrawal';
+    return { name: 'ATM Withdrawal', source: 'atm' };
   }
 
   // Unmapped: prefer a multi-word name token, which is nearly always a real
@@ -715,7 +756,7 @@ function resolveMerchant({
   // better normalised.
   const candidateIsMultiWord = !!candidate && /\s/.test(candidate.trim());
   if (candidateIsMultiWord) {
-    return titleCase(cleanHandle(candidate));
+    return { name: titleCase(cleanHandle(candidate)), source: 'name' };
   }
 
   if (vpa) {
@@ -724,29 +765,44 @@ function resolveMerchant({
     // VPA's local-part is often only part of it.
     const beside = nameBesideVpa(tokens, vpa);
     if (beside) {
-      return titleCase(cleanHandle(`${beside} ${fromVpa ?? ''}`.trim()));
+      return {
+        name: titleCase(cleanHandle(`${beside} ${fromVpa ?? ''}`.trim())),
+        source: 'vpa',
+      };
     }
     if (fromVpa) {
-      return fromVpa;
+      return { name: fromVpa, source: 'vpa' };
     }
     // Nothing readable in it: a phone number or an account number as the
     // local part. The VPA itself is still the right answer: it is stable per
     // counterparty, whereas the raw narration carries a per-transaction
     // reference and so would mint a new payee every time.
-    return vpa.toLowerCase();
+    return { name: vpa.toLowerCase(), source: 'vpa' };
   }
 
   if (candidate) {
     // Handles carry a per-account numeric id; stripping it keeps one payee per
     // merchant instead of one per merchant account.
-    return titleCase(isHandle(candidate) ? cleanHandle(candidate) : candidate);
+    return {
+      name: titleCase(isHandle(candidate) ? cleanHandle(candidate) : candidate),
+      source: 'single',
+    };
+  }
+
+  // Narrations with no name at all can still be named by the user's own rules,
+  // written against the narration with its digits removed. Only reached when
+  // everything above found nothing, so it cannot change a narration that
+  // already resolves.
+  const named = lookupUserRule(raw.replace(/\d+/g, ''), rules);
+  if (named) {
+    return { name: named, source: 'merchant' };
   }
 
   // A transfer addressed to an account number rather than to a handle. Ranked
   // below every name, since the account is an identity and not a name.
   const account = nameFromAccountReference(tokens);
   if (account) {
-    return account;
+    return { name: account, source: 'account' };
   }
 
   // A recurring mandate has no name in its narration, only the collecting
@@ -757,7 +813,7 @@ function resolveMerchant({
   if (kind === 'ach') {
     const mandate = subTokens(tokens).find(token => MANDATE_TOKEN.test(token));
     if (mandate) {
-      return `NACH ${mandate.toUpperCase()}`;
+      return { name: `NACH ${mandate.toUpperCase()}`, source: 'mandate' };
     }
 
     // No mandate reference either, but the description field still leads with
@@ -769,7 +825,10 @@ function resolveMerchant({
     if (entity) {
       const name =
         lookupMerchant(entity.name, rules) ?? nachEntityName(entity.name);
-      return isDividend(entity.rest) ? `${name} Dividend` : name;
+      return {
+        name: isDividend(entity.rest) ? `${name} Dividend` : name,
+        source: 'name',
+      };
     }
   }
 

@@ -1,5 +1,3 @@
-import { mkdir } from 'node:fs/promises';
-
 import type { StatementTransaction } from '../interpret/rows.js';
 import {
   CARD_AUTOPAY_PAYEE,
@@ -22,6 +20,8 @@ export type ActualImportTransaction = {
   imported_payee: string;
   notes: string;
   imported_id?: string;
+  /** An Actual category id, chosen in the browser. */
+  category?: string;
   cleared: boolean;
 };
 
@@ -29,7 +29,8 @@ export type PushConfig = {
   serverURL: string;
   password: string;
   syncId: string;
-  dataDir: string;
+  /** Where the Node API keeps its local copy of the budget. Not used in a browser. */
+  dataDir?: string;
   /** End-to-end encryption password, for encrypted budget files. */
   encryptionPassword?: string;
   /** Account name (case-insensitive) or id. */
@@ -44,6 +45,10 @@ export type PushResult = {
   accountId: string;
   added: number;
   updated: number;
+  /** Rows Actual skipped, such as one deleted earlier that a statement repeats. */
+  ignored: number;
+  /** Ids of the transactions written, for undoing an import. */
+  addedIds: string[];
   errors: string[];
   dryRun: boolean;
   /** Set with `transferTo`. */
@@ -98,6 +103,7 @@ export function toImportEntities(
       imported_payee: transaction.raw,
       notes: transaction.raw,
       ...(transaction.ref ? { imported_id: transaction.ref } : {}),
+      ...(transaction.categoryId ? { category: transaction.categoryId } : {}),
       // Statement rows have already settled at the bank.
       cleared: true,
     };
@@ -187,9 +193,9 @@ type ActualAccount = { id: string; name: string; closed?: boolean };
  * Declared here rather than imported so this file type-checks whether or not
  * the optional dependency is installed.
  */
-type ActualApi = {
+export type ActualApi = {
   init(config: {
-    dataDir: string;
+    dataDir?: string;
     serverURL: string;
     password: string;
   }): Promise<unknown>;
@@ -217,6 +223,7 @@ type ActualApi = {
   ): Promise<{
     added?: string[];
     updated?: string[];
+    updatedPreview?: Array<{ ignored?: boolean }>;
     errors?: Array<{ message: string }>;
   }>;
   shutdown(): Promise<void>;
@@ -251,39 +258,113 @@ export function resolveAccount(
   return match;
 }
 
+/** Opens a connection to Actual and returns the API, ready to use. */
+export type ActualConnector = (config: PushConfig) => Promise<ActualApi>;
+
+/** The parts of the API a push uses once a budget is open. */
+export type PushApi = Pick<
+  ActualApi,
+  'getAccounts' | 'getPayees' | 'getTransactions' | 'importTransactions'
+>;
+
+/** What a push needs once a budget is open. */
+export type PushOptions = Pick<PushConfig, 'account' | 'dryRun' | 'transferTo'>;
+
 /**
- * Send transactions to Actual.
- *
- * `@actual-app/api` is imported dynamically so the converter works without it
- * installed, and so a missing install produces an actionable message rather
- * than a module-resolution error at startup.
+ * Send transactions to an already open budget. Nothing is downloaded or shut
+ * down here, so a session can preview, import and check balances in turn.
+ */
+export async function pushWithApi(
+  api: PushApi,
+  transactions: StatementTransaction[],
+  config: PushOptions,
+): Promise<PushResult> {
+  const accounts = await api.getAccounts();
+  const account = resolveAccount(accounts, config.account);
+
+  let transfer: { payeeId: string; skip: Set<number> } | undefined;
+  let transferAccountName: string | undefined;
+  if (config.transferTo) {
+    const other = resolveAccount(accounts, config.transferTo);
+    if (other.id === account.id) {
+      throw new Error('--transfer-to must name a different account.');
+    }
+
+    const payee = (await api.getPayees()).find(
+      candidate => candidate.transfer_acct === other.id,
+    );
+    if (!payee) {
+      throw new Error(`Actual has no transfer payee for "${other.name}".`);
+    }
+
+    const dates = transactions.filter(isCardPayment).map(t => t.date).sort();
+    const first = dates[0];
+    const last = dates[dates.length - 1];
+    const existing =
+      first && last
+        ? await api.getTransactions(
+            other.id,
+            shiftDate(first, -MATCH_WINDOW_DAYS),
+            shiftDate(last, MATCH_WINDOW_DAYS),
+          )
+        : [];
+
+    transfer = {
+      payeeId: payee.id,
+      skip: new Set(findExistingCounterparts(transactions, existing)),
+    };
+    transferAccountName = other.name;
+  }
+
+  const result = await api.importTransactions(
+    account.id,
+    toImportEntities(transactions, transfer),
+    {
+      dryRun: config.dryRun,
+      defaultCleared: true,
+      // Actual title-cases imported payees by default, which lowercases
+      // first: `DMart` would become `Dmart` and `HDFC ... SIP` would become
+      // `Hdfc ... Sip`. The names here are already deliberately cased.
+      payeeNameNormalization: 'original',
+    },
+  );
+
+  return {
+    accountName: account.name,
+    accountId: account.id,
+    added: result.added?.length ?? 0,
+    updated: result.updated?.length ?? 0,
+    ignored: (result.updatedPreview ?? []).filter(row => row.ignored).length,
+    addedIds: result.added ?? [],
+    errors: (result.errors ?? []).map(error => error.message),
+    dryRun: config.dryRun,
+    ...(transfer && transferAccountName
+      ? {
+          transfer: {
+            accountName: transferAccountName,
+            sent: transactions.filter(
+              (t, index) => isCardPayment(t) && !transfer.skip.has(index),
+            ).length,
+            unlinked: [...transfer.skip].flatMap(index => {
+              const row = transactions[index];
+              return row ? [{ date: row.date, amount: row.amount }] : [];
+            }),
+          },
+        }
+      : {}),
+  };
+}
+
+/**
+ * Connect, send transactions, and shut down. `connect` says how to reach the
+ * API, which is the one part that differs between Node and a browser.
  */
 export async function pushTransactions(
   transactions: StatementTransaction[],
   config: PushConfig,
+  connect: ActualConnector,
 ): Promise<PushResult> {
-  let api: ActualApi;
-  try {
-    // Non-literal specifier on purpose: it keeps TypeScript from trying to
-    // resolve an optional dependency that may not be installed.
-    const specifier = '@actual-app/api';
-    api = (await import(specifier)) as unknown as ActualApi;
-  } catch {
-    throw new Error(
-      '--push needs @actual-app/api, which installs automatically as an\n' +
-        'optional dependency. Reinstall with optional dependencies enabled:\n' +
-        '  npm install --include=optional india2actual',
-    );
-  }
-
-  // The API reads this directory on startup and fails if it does not exist.
-  await mkdir(config.dataDir, { recursive: true });
-
-  await api.init({
-    dataDir: config.dataDir,
-    serverURL: config.serverURL,
-    password: config.password,
-  });
+  const api = await connect(config);
 
   try {
     await api.downloadBudget(
@@ -292,79 +373,7 @@ export async function pushTransactions(
         ? { password: config.encryptionPassword }
         : undefined,
     );
-
-    const accounts = await api.getAccounts();
-    const account = resolveAccount(accounts, config.account);
-
-    let transfer: { payeeId: string; skip: Set<number> } | undefined;
-    let transferAccountName: string | undefined;
-    if (config.transferTo) {
-      const other = resolveAccount(accounts, config.transferTo);
-      if (other.id === account.id) {
-        throw new Error('--transfer-to must name a different account.');
-      }
-
-      const payee = (await api.getPayees()).find(
-        candidate => candidate.transfer_acct === other.id,
-      );
-      if (!payee) {
-        throw new Error(`Actual has no transfer payee for "${other.name}".`);
-      }
-
-      const dates = transactions.filter(isCardPayment).map(t => t.date).sort();
-      const first = dates[0];
-      const last = dates[dates.length - 1];
-      const existing =
-        first && last
-          ? await api.getTransactions(
-              other.id,
-              shiftDate(first, -MATCH_WINDOW_DAYS),
-              shiftDate(last, MATCH_WINDOW_DAYS),
-            )
-          : [];
-
-      transfer = {
-        payeeId: payee.id,
-        skip: new Set(findExistingCounterparts(transactions, existing)),
-      };
-      transferAccountName = other.name;
-    }
-
-    const result = await api.importTransactions(
-      account.id,
-      toImportEntities(transactions, transfer),
-      {
-        dryRun: config.dryRun,
-        defaultCleared: true,
-        // Actual title-cases imported payees by default, which lowercases
-        // first: `DMart` would become `Dmart` and `HDFC ... SIP` would become
-        // `Hdfc ... Sip`. The names here are already deliberately cased.
-        payeeNameNormalization: 'original',
-      },
-    );
-
-    return {
-      accountName: account.name,
-      accountId: account.id,
-      added: result.added?.length ?? 0,
-      updated: result.updated?.length ?? 0,
-      errors: (result.errors ?? []).map(error => error.message),
-      dryRun: config.dryRun,
-      ...(transfer && transferAccountName
-        ? {
-            transfer: {
-              accountName: transferAccountName,
-              sent: transactions.filter(
-                (t, index) => isCardPayment(t) && !transfer.skip.has(index),
-              ).length,
-              unlinked: [...transfer.skip].flatMap(index => {
-                const row = transactions[index];
-                return row ? [{ date: row.date, amount: row.amount }] : [];
-              }),
-            },
-          }
-        : {}),
-    };
+    return await pushWithApi(api, transactions, config);
   } finally {
     // Always shut down: this flushes the sync and closes the budget, and
     // leaving it open corrupts the local cache for the next run.

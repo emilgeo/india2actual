@@ -5,6 +5,11 @@ import { parseStatementDate } from '../interpret/values.js';
 
 import type { Figure, Table } from './types.js';
 
+/** Did opening the PDF fail because it needs a password, or the one given is wrong? */
+export function isPasswordError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'PasswordException';
+}
+
 export type PdfExtractOptions = {
   password?: string;
 };
@@ -83,12 +88,17 @@ const LEADING_DATE =
   /^\s*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[\s\-/.]+(\d{1,2}|[a-z]{3,9})[\s\-/.,]+\d{2,4})(?!\d)/i;
 
 async function readLines(
-  path: string,
+  bytes: Uint8Array,
   options: PdfExtractOptions,
 ): Promise<{ lines: Line[]; pages: number }> {
   const doc = await getDocument({
-    url: path,
+    // A plain copy: PDF.js takes ownership of the buffer it is given, and
+    // rejects a Node Buffer.
+    data: new Uint8Array(bytes),
     useSystemFonts: true,
+    // Errors only: PDF.js otherwise prints a warning for every image stream it
+    // cannot decode, none of which affects the text.
+    verbosity: 0,
     ...(options.password ? { password: options.password } : {}),
   }).promise;
 
@@ -901,10 +911,11 @@ export function tablesFromLines(
 }
 
 export async function extractPdf(
+  bytes: Uint8Array,
   path: string,
   options: PdfExtractOptions = {},
 ): Promise<Table[]> {
-  const { lines, pages } = await readLines(path, options);
+  const { lines, pages } = await readLines(bytes, options);
   return tablesFromLines(lines, {
     path,
     format: 'pdf',
