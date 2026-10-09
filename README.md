@@ -86,7 +86,7 @@ and you can download them as a file that the command line reads too.
 
 ### Pushing from the browser
 
-To skip the import step too, download `India2Actual.html` from the
+To skip the import step too, download `india2actual.html` from the
 [latest release](https://github.com/emilgeo/india2actual/releases/latest) and
 open it from your computer. It is the same page with a connection to your Actual
 server added, so it has to be a separate file: the Convert page is forbidden
@@ -107,7 +107,7 @@ pick payees you already have in Actual from a list.
 The same push page is also available as a Chrome extension that opens in the
 browser's side panel, next to Actual, so everything stays in one window. Open an
 account in Actual and the panel preselects that account for the statement you
-drop in. Each release has `India2Actual-extension.zip`. It is not in the Chrome
+drop in. Each release has `india2actual-extension.zip`. It is not in the Chrome
 Web Store, so unzip it, open `chrome://extensions`, turn on Developer mode,
 choose Load unpacked and pick the folder, then click the toolbar icon.
 

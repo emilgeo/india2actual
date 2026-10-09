@@ -20,12 +20,12 @@ All notable changes to this project are recorded here. The format follows
 - A browser version of the converter on the website. Drop a statement (PDF, CSV
   or Excel), check it, name unclear payees, and download one file per account.
   Nothing is uploaded, and the page cannot make network requests.
-- `India2Actual.html`, attached to each release, is the same page with a
+- `india2actual.html`, attached to each release, is the same page with a
   connection to your Actual server. Choose an Actual account for each statement
   account, preview what an import would do, push, see the closing balance checked
   against Actual's, and undo the import. Payees can be given a category, with an
   Actual rule so it is remembered, and card payments can be sent as transfers.
-- A Chrome side panel extension, `India2Actual-extension.zip` on each release.
+- A Chrome side panel extension, `india2actual-extension.zip` on each release.
   It is the push page beside Actual, and it preselects the account you have open
   in Actual for the statement you drop in.
 - The extension can stay connected: tick Stay connected on this device and it

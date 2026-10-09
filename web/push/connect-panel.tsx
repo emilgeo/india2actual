@@ -129,7 +129,7 @@ export function ConnectPanel({ connection, onConnected, onDisconnected }: Props)
         {mismatch ? (
           <p class="notice error">
             The server and this page are on different Actual releases, so
-            pushing may fail or misbehave. Use the matching India2Actual file
+            pushing may fail or misbehave. Use the matching india2actual file
             from the releases page, or update the server.
           </p>
         ) : null}

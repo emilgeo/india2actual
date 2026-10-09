@@ -84,7 +84,7 @@ test.describe('the side panel extension', () => {
     expect(manifest?.permissions).toEqual(['sidePanel']);
     expect(manifest?.host_permissions).toEqual(['http://localhost/*', 'http://127.0.0.1/*']);
     expect(manifest?.optional_host_permissions).toEqual(['https://*/*']);
-    await expect(panel.locator('h1')).toHaveText('India2Actual');
+    await expect(panel.locator('h1')).toHaveText('india2actual');
   });
 
   test('reads a CSV and a PDF with two accounts under the extension policy', async () => {

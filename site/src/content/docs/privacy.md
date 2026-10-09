@@ -22,7 +22,7 @@ the settings in your `.env` file or environment. Nothing is sent anywhere else.
 
 ## The Convert page and the downloadable file
 
-The Convert page and `India2Actual.html` read a statement inside the browser
+The Convert page and `india2actual.html` read a statement inside the browser
 tab. The Convert page carries a security policy that forbids every network
 request, so it cannot send your statement anywhere, even by mistake. The
 downloadable file may reach an `https` server or one on your own computer, and

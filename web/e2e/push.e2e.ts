@@ -10,7 +10,7 @@ import { TestServer } from './actual-server.js';
 import type { Budget } from './actual-server.js';
 
 const root = resolve(import.meta.dirname, '..', '..');
-const pageUrl = pathToFileURL(join(root, 'dist-web', 'India2Actual.html')).href;
+const pageUrl = pathToFileURL(join(root, 'dist-web', 'india2actual.html')).href;
 
 const CSV = [
   'Date,Narration,Withdrawal Amt.,Deposit Amt.,Closing Balance',

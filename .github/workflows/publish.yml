@@ -64,15 +64,15 @@ jobs:
         run: |
           npm run build:web
           npm run build:extension
-          (cd dist-extension && sha256sum India2Actual-extension.zip) >> dist-web/SHA256SUMS
+          (cd dist-extension && sha256sum india2actual-extension.zip) >> dist-web/SHA256SUMS
       - name: Attach them to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
         run: >
           gh release upload "$TAG"
-          dist-web/India2Actual.html
-          dist-web/India2Actual-convert.html
-          dist-extension/India2Actual-extension.zip
+          dist-web/india2actual.html
+          dist-web/india2actual-convert.html
+          dist-extension/india2actual-extension.zip
           dist-web/SHA256SUMS
           --clobber

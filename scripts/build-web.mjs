@@ -24,7 +24,7 @@ const css = await buildCss();
 
 const variants = [
   {
-    file: 'India2Actual-convert.html',
+    file: 'india2actual-convert.html',
     push: false,
     policy: js => [
       "default-src 'none'",
@@ -39,7 +39,7 @@ const variants = [
     ],
   },
   {
-    file: 'India2Actual.html',
+    file: 'india2actual.html',
     push: true,
     policy: js => [
       "default-src 'none'",

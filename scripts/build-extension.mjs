@@ -28,7 +28,7 @@ for (const { name, data } of files) {
   mkdirSync(resolve(path, '..'), { recursive: true });
   writeFileSync(path, data);
 }
-const archive = resolve(outDir, 'India2Actual-extension.zip');
+const archive = resolve(outDir, 'india2actual-extension.zip');
 writeFileSync(archive, zip(files));
 
 const size = files.reduce((sum, file) => sum + file.data.length, 0);

@@ -26,7 +26,7 @@ const ICONS = { 16: 'icons/16.png', 32: 'icons/32.png', 48: 'icons/48.png', 128:
 export function manifestFor(version, target = 'chrome') {
   const common = {
     manifest_version: 3,
-    name: 'India2Actual',
+    name: 'india2actual',
     version,
     description:
       'Import Indian bank and credit card statements into Actual Budget, with real payee names, from a side panel.',
@@ -41,7 +41,7 @@ export function manifestFor(version, target = 'chrome') {
       ...common,
       background: { scripts: ['background.js'] },
       sidebar_action: {
-        default_title: 'India2Actual',
+        default_title: 'india2actual',
         default_panel: 'panel.html',
         default_icon: ICONS,
       },
@@ -53,7 +53,7 @@ export function manifestFor(version, target = 'chrome') {
 
   return {
     ...common,
-    action: { default_title: 'Open India2Actual', default_icon: ICONS },
+    action: { default_title: 'Open india2actual', default_icon: ICONS },
     background: { service_worker: 'background.js' },
     side_panel: { default_path: 'panel.html' },
     permissions: ['sidePanel'],

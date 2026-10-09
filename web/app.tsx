@@ -233,7 +233,7 @@ export function App() {
   return (
     <main>
       <header class="hero">
-        <h1>India2Actual</h1>
+        <h1>india2actual</h1>
         <p>
           Turn an Indian bank or credit card statement into a file Actual Budget
           can import, with real payee names.
@@ -280,10 +280,10 @@ export function App() {
         <p class="muted">
           To push straight into Actual instead of downloading a file, download{' '}
           <a
-            href="https://github.com/emilgeo/india2actual/releases/latest/download/India2Actual.html"
+            href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual.html"
             rel="noreferrer"
           >
-            India2Actual.html
+            india2actual.html
           </a>{' '}
           from the latest release and open it from your computer.
         </p>
@@ -462,7 +462,7 @@ export function App() {
       </section>
 
       <footer class="foot">
-        <span>India2Actual {__VERSION__}</span>
+        <span>india2actual {__VERSION__}</span>
         <span>Not affiliated with Actual Budget or any bank.</span>
         {location.protocol.startsWith('http') ? (
           <a href="SHA256SUMS">Fingerprint of this page</a>

@@ -11,7 +11,7 @@ import { consolidatedLines } from '../../src/testing/fixtures.js';
 import { pdfFromLines } from '../../src/testing/pdf.js';
 
 const root = resolve(import.meta.dirname, '..', '..');
-const pageUrl = pathToFileURL(join(root, 'dist-web', 'India2Actual-convert.html')).href;
+const pageUrl = pathToFileURL(join(root, 'dist-web', 'india2actual-convert.html')).href;
 
 const CSV = [
   'Date,Narration,Withdrawal Amt.,Deposit Amt.,Closing Balance',
@@ -63,7 +63,7 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('the convert page', () => {
   test('opens with no policy violations and shows the privacy promise', async ({ page }) => {
-    await expect(page.locator('h1')).toHaveText('India2Actual');
+    await expect(page.locator('h1')).toHaveText('india2actual');
     await expect(page.locator('.privacy')).toContainText('not uploaded');
     expect(await blocked(page)).toEqual([]);
   });

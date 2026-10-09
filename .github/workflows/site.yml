@@ -59,7 +59,7 @@ jobs:
         run: |
           (cd "$PAGE_DIR" && npm ci && npm run build:web)
           mkdir -p site/public/convert
-          cp "$PAGE_DIR/dist-web/India2Actual-convert.html" site/public/convert/index.html
+          cp "$PAGE_DIR/dist-web/india2actual-convert.html" site/public/convert/index.html
           cd site/public/convert
           sha256sum index.html > SHA256SUMS
       - name: Install, build and upload the site
