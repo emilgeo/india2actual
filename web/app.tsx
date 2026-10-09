@@ -508,8 +508,16 @@ export function App() {
         <footer class="foot">
           <span>india2actual {__VERSION__}</span>
           <span>Not affiliated with Actual Budget or any bank.</span>
+          <span>Made by an Actual Budget lover.</span>
           {location.protocol.startsWith('http') ? (
-            <a href="SHA256SUMS">Fingerprint of this page</a>
+            <>
+              <a href="SHA256SUMS">Fingerprint of this page</a>
+              <a href="/privacy/">Privacy</a>
+              <a href="/docs/">Documentation</a>
+              <a href="https://github.com/emilgeo/india2actual/issues">Report a problem</a>
+              <a href="https://github.com/emilgeo/india2actual/blob/main/LICENSE">Licence (MIT)</a>
+              <a href="https://github.com/emilgeo/india2actual/releases/latest">Downloads</a>
+            </>
           ) : null}
         </footer>
       </main>

@@ -213,13 +213,6 @@ test.describe('the site header', () => {
     await expect(page.getByRole('navigation', { name: 'Site' })).toHaveCount(0);
   });
 
-  test('colours links with the theme, not the browser default', async ({ page }) => {
-    const colour = await page
-      .getByRole('link', { name: /india2actual.html/ })
-      .evaluate(link => getComputedStyle(link).color);
-    expect(colour).not.toBe('rgb(0, 0, 238)');
-  });
-
   test('links to the rest of the site when the page is served', async ({ page }) => {
     const html = readFileSync(join(root, 'dist-web', 'india2actual-convert.html'));
     await page.route('http://site.test/convert/', route =>
@@ -229,6 +222,23 @@ test.describe('the site header', () => {
     const nav = page.getByRole('navigation', { name: 'Site' });
     await expect(nav.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', '/docs/');
     await expect(nav.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy/');
+    const footer = page.locator('footer');
+    await expect(footer).toContainText('Made by an Actual Budget lover');
+    await expect(footer.getByRole('link', { name: 'Report a problem' })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'Fingerprint of this page' })).toBeVisible();
+  });
+
+  test('keeps the footer free of site links when opened from disk', async ({ page }) => {
+    const footer = page.locator('footer');
+    await expect(footer).toContainText('Not affiliated');
+    await expect(footer.getByRole('link')).toHaveCount(0);
+  });
+
+  test('colours links with the theme, not the browser default', async ({ page }) => {
+    const colour = await page
+      .getByRole('link', { name: /india2actual.html/ })
+      .evaluate(link => getComputedStyle(link).color);
+    expect(colour).not.toBe('rgb(0, 0, 238)');
   });
 });
 
