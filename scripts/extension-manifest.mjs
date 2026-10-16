@@ -51,7 +51,7 @@ export function manifestFor(version, target = 'chrome') {
       // on both desktop and Android; "none" because nothing goes to the developer.
       browser_specific_settings: {
         gecko: {
-          id: '{5b647311-049e-440c-be80-79911e701a83}',
+          id: '{da353e25-8c44-4925-9eee-04430daf93cd}',
           strict_min_version: '142.0',
           data_collection_permissions: { required: ['none'] },
         },
