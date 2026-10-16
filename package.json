@@ -46,7 +46,7 @@
     "build:extension": "node scripts/build-extension.mjs"
   },
   "dependencies": {
-    "csv-parse": "^7.0.2",
+    "csv-parse": "^7.0.3",
     "csv-stringify": "^6.5.0",
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^5.11.1",
