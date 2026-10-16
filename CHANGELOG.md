@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+## 0.5.2 - 2026-10-16
+
 ### Fixed
 
 - The Firefox extension build opens its sidebar from the toolbar button and
