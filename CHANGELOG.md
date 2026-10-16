@@ -10,6 +10,8 @@ All notable changes to this project are recorded here. The format follows
 
 - The Firefox extension build opens its sidebar from the toolbar button and
   declares that it collects no data, as Firefox now requires.
+- The transactions table's headers line up with their columns on a narrow screen,
+  such as the extension's side panel.
 
 ## 0.5.1 - 2026-10-15
 

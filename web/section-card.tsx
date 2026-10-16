@@ -122,7 +122,9 @@ export function SectionCard(props: Props) {
             <th scope="col">Use</th>
             <th scope="col">Date</th>
             <th scope="col">Payee</th>
-            <th scope="col">Narration</th>
+            <th scope="col" class="narration">
+              Narration
+            </th>
             <th scope="col" class="num">
               Amount
             </th>
