@@ -12,6 +12,8 @@ All notable changes to this project are recorded here. The format follows
   declares that it collects no data, as Firefox now requires.
 - The transactions table's headers line up with their columns on a narrow screen,
   such as the extension's side panel.
+- The push page and the extension no longer say they cannot make network
+  requests. They connect to your Actual server; only the Convert page cannot.
 
 ## 0.5.1 - 2026-10-15
 

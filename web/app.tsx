@@ -344,8 +344,9 @@ export function App() {
             can import, with real payee names.
           </p>
           <p class="privacy">
-            Everything happens in this page. Your statement is not uploaded, and
-            this page is not allowed to make network requests.
+            {__PUSH__
+              ? 'Everything happens in this page. Your statement is not uploaded anywhere. The page only talks to the Actual server you connect to, if you connect.'
+              : 'Everything happens in this page. Your statement is not uploaded, and this page is not allowed to make network requests.'}
           </p>
         </header>
 
