@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- The extension has a new icon.
+
 ## 0.5.2 - 2026-10-16
 
 ### Fixed

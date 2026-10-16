@@ -15,7 +15,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "og-image": "node scripts/make-og-image.mjs"
+    "og-image": "node scripts/make-og-image.mjs",
+    "extension-icons": "node scripts/make-extension-icons.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

@@ -7,7 +7,7 @@ import { mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { manifestFor } from './extension-manifest.mjs';
-import { pngIcon, zip } from './pack.mjs';
+import { zip } from './pack.mjs';
 import { buildCss, buildWorker, bundleAppSplit, packageVersion, root } from './web-shared.mjs';
 
 const target = process.argv.includes('--firefox') ? 'firefox' : 'chrome';
@@ -21,7 +21,7 @@ const files = [
   { name: 'panel.css', data: Buffer.from(await buildCss()) },
   { name: 'pdf.worker.js', data: Buffer.from(worker) },
   ...(await bundleAppSplit()),
-  ...[16, 32, 48, 128].map(size => ({ name: `icons/${size}.png`, data: pngIcon(size) })),
+  ...[16, 32, 48, 128].map(size => ({ name: `icons/${size}.png`, data: readFileSync(resolve(root, `extension/icons/${size}.png`)) })),
 ];
 
 rmSync(outDir, { recursive: true, force: true });

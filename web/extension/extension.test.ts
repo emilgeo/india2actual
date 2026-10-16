@@ -1,9 +1,10 @@
-import { inflateRawSync, inflateSync } from 'node:zlib';
+import { readFileSync } from 'node:fs';
+import { inflateRawSync } from 'node:zlib';
 
 import { describe, expect, it } from 'vitest';
 
 import { EXTENSION_POLICY, manifestFor } from '../../scripts/extension-manifest.mjs';
-import { crc32, pngIcon, zip } from '../../scripts/pack.mjs';
+import { crc32, zip } from '../../scripts/pack.mjs';
 
 import { accountFromUrl, pickTab } from './follow.js';
 
@@ -105,15 +106,14 @@ describe('the file writers', () => {
     const body = archive.subarray(30 + nameLength, 30 + nameLength + size);
     expect(inflateRawSync(body).toString()).toBe('hello hello hello');
   });
+});
 
-  it('draws a valid square PNG icon', () => {
-    const png = pngIcon(32);
+describe('the icons', () => {
+  it.each([16, 32, 48, 128])('has a square %i px PNG', size => {
+    const png = readFileSync(new URL(`../../extension/icons/${size}.png`, import.meta.url));
 
     expect([...png.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-    expect(png.readUInt32BE(16)).toBe(32);
-    expect(png.readUInt32BE(20)).toBe(32);
-    const idat = png.indexOf('IDAT');
-    const length = png.readUInt32BE(idat - 4);
-    expect(inflateSync(png.subarray(idat + 4, idat + 4 + length)).length).toBe(32 * (32 * 4 + 1));
+    expect(png.readUInt32BE(16)).toBe(size);
+    expect(png.readUInt32BE(20)).toBe(size);
   });
 });
