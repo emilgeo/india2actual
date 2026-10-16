@@ -61,14 +61,41 @@ export async function buildCss() {
   ).code.trim();
 }
 
+/**
+ * The app for the extension, split so that no file passes the 5 MB the Firefox
+ * add-on checks will read. The Actual API (SQLite engine included) becomes its
+ * own chunk, loaded when the page first connects. Returns `{ name, data }` files.
+ */
+export async function bundleAppSplit() {
+  const result = await build({
+    entryPoints: { panel: resolve(root, 'web/main.tsx') },
+    ...appOptions({ push: true, extension: true, worker: '' }),
+    format: 'esm',
+    splitting: true,
+    outdir: 'out',
+    chunkNames: 'chunk-[hash]',
+  });
+  return result.outputFiles.map(file => ({
+    name: file.path.replace(/^.*[\\/]out[\\/]/, ''),
+    data: Buffer.from(file.contents),
+  }));
+}
+
 /** The app as one script. `push` carries the Actual API, `extension` is for the side panel. */
 export async function bundleApp({ push, extension = false, worker }) {
   const result = await build({
     entryPoints: [resolve(root, 'web/main.tsx')],
+    ...appOptions({ push, extension, worker }),
+    format: 'iife',
+  });
+  return result.outputFiles[0]?.text ?? '';
+}
+
+function appOptions({ push, extension, worker }) {
+  return {
     bundle: true,
     write: false,
     platform: 'browser',
-    format: 'iife',
     target: 'es2022',
     minify: true,
     legalComments: 'none',
@@ -89,6 +116,5 @@ export async function bundleApp({ push, extension = false, worker }) {
       __EXTENSION__: String(extension),
       __ACTUAL_API_VERSION__: JSON.stringify(actualApiVersion),
     },
-  });
-  return result.outputFiles[0]?.text ?? '';
+  };
 }

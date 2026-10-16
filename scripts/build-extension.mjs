@@ -1,13 +1,14 @@
 // Builds the side panel extension into dist-extension/ and a zip of it.
 //
 // The page is the push page, as separate files because an extension page may
-// not carry inline script. `--firefox` builds the sidebar variant instead.
+// not carry inline script, and split into chunks because Firefox's add-on
+// checks do not read a file over 5 MB. `--firefox` builds the sidebar variant instead.
 import { mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { manifestFor } from './extension-manifest.mjs';
 import { pngIcon, zip } from './pack.mjs';
-import { buildCss, buildWorker, bundleApp, packageVersion, root } from './web-shared.mjs';
+import { buildCss, buildWorker, bundleAppSplit, packageVersion, root } from './web-shared.mjs';
 
 const target = process.argv.includes('--firefox') ? 'firefox' : 'chrome';
 const outDir = resolve(root, target === 'firefox' ? 'dist-extension-firefox' : 'dist-extension');
@@ -18,7 +19,8 @@ const files = [
   { name: 'background.js', data: readFileSync(resolve(root, 'extension/background.js')) },
   { name: 'panel.html', data: readFileSync(resolve(root, 'extension/panel.html')) },
   { name: 'panel.css', data: Buffer.from(await buildCss()) },
-  { name: 'panel.js', data: Buffer.from(await bundleApp({ push: true, extension: true, worker })) },
+  { name: 'pdf.worker.js', data: Buffer.from(worker) },
+  ...(await bundleAppSplit()),
   ...[16, 32, 48, 128].map(size => ({ name: `icons/${size}.png`, data: pngIcon(size) })),
 ];
 
