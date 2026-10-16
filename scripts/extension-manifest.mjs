@@ -40,14 +40,21 @@ export function manifestFor(version, target = 'chrome') {
   if (target === 'firefox') {
     return {
       ...common,
+      action: { default_title: 'Open india2actual', default_icon: ICONS },
       background: { scripts: ['background.js'] },
       sidebar_action: {
         default_title: 'india2actual',
         default_panel: 'panel.html',
         default_icon: ICONS,
       },
+      // Firefox 142 is the first release that reads data_collection_permissions
+      // on both desktop and Android; "none" because nothing goes to the developer.
       browser_specific_settings: {
-        gecko: { id: 'india2actual@users.noreply.github.com' },
+        gecko: {
+          id: '{5b647311-049e-440c-be80-79911e701a83}',
+          strict_min_version: '142.0',
+          data_collection_permissions: { required: ['none'] },
+        },
       },
     };
   }

@@ -72,6 +72,13 @@ describe('the extension manifest', () => {
     expect(firefox.background).toEqual({ scripts: ['background.js'] });
     expect(firefox.side_panel).toBeUndefined();
     expect(firefox.permissions).toBeUndefined();
+    expect(firefox.action?.default_title).toBe('Open india2actual');
+  });
+
+  it('declares on Firefox that no data is collected', () => {
+    const gecko = manifestFor('1.2.3', 'firefox').browser_specific_settings?.gecko;
+    expect(gecko?.data_collection_permissions).toEqual({ required: ['none'] });
+    expect(gecko?.strict_min_version).toBe('142.0');
   });
 });
 

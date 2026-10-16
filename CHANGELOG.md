@@ -6,6 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- The Firefox extension build opens its sidebar from the toolbar button and
+  declares that it collects no data, as Firefox now requires.
+
 ## 0.5.1 - 2026-10-15
 
 ### Changed
