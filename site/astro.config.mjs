@@ -1,5 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 
 const site = 'https://india2actual.emil.ge';
@@ -7,6 +8,8 @@ const site = 'https://india2actual.emil.ge';
 export default defineConfig({
   site,
   integrations: [
+    // The Convert page is built outside Astro, so it is added by hand.
+    sitemap({ customPages: [`${site}/convert/`] }),
     starlight({
       title: 'india2actual',
       description:

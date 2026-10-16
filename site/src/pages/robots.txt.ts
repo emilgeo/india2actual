@@ -7,7 +7,6 @@ export const GET: APIRoute = ({ site }) =>
       'Allow: /',
       '',
       `Sitemap: ${new URL('sitemap-index.xml', site)}`,
-      `Sitemap: ${new URL('sitemap-convert.xml', site)}`,
       '',
     ].join('\n'),
     { headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
