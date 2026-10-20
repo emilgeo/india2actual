@@ -10,7 +10,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Changed
 
-- The extension has a new icon.
+- The extension, the website and the web pages have a new icon.
 
 ### Fixed
 
