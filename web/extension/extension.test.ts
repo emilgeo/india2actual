@@ -7,7 +7,7 @@ import { EXTENSION_POLICY, manifestFor } from '../../scripts/extension-manifest.
 import { crc32, zip } from '../../scripts/pack.mjs';
 import { bundleAppSplit } from '../../scripts/web-shared.mjs';
 
-import { accountFromUrl, pickTab } from './follow.js';
+import { accountFromUrl, hostPattern, pickTab } from './follow.js';
 
 const ORIGIN = 'https://actual.example.test';
 
@@ -28,6 +28,14 @@ describe('accountFromUrl', () => {
   it('matches a server on this computer whatever the port', () => {
     expect(accountFromUrl('http://localhost:5006/accounts/x1', 'http://localhost:5006')).toBe('x1');
     expect(accountFromUrl('http://localhost:5007/accounts/x1', 'http://localhost:5006')).toBeNull();
+  });
+});
+
+describe('hostPattern', () => {
+  it('names the host without a port, which Firefox match patterns reject', () => {
+    expect(hostPattern('http://localhost:5006')).toBe('http://localhost/*');
+    expect(hostPattern('https://actual.example.test')).toBe('https://actual.example.test/*');
+    expect(hostPattern('https://actual.example.test:8443')).toBe('https://actual.example.test/*');
   });
 });
 

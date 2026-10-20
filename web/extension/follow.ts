@@ -17,6 +17,12 @@ export function accountFromUrl(url: string, origin: string): string | null {
   }
 }
 
+/** A match pattern for a server's host. Firefox matches no tab when the pattern has a port. */
+export function hostPattern(origin: string): string {
+  const { protocol, hostname } = new URL(origin);
+  return `${protocol}//${hostname}/*`;
+}
+
 type TabLike = { url?: string | undefined; active?: boolean; lastAccessed?: number };
 
 /** The tab to read: the active one, else the one used most recently. */
@@ -31,7 +37,7 @@ export function pickTab<T extends TabLike>(tabs: T[]): T | undefined {
 /** Ask to read tabs on the user's own Actual server. False when refused. */
 export async function requestHostAccess(origin: string): Promise<boolean> {
   try {
-    return await chrome.permissions.request({ origins: [`${origin}/*`] });
+    return await chrome.permissions.request({ origins: [hostPattern(origin)] });
   } catch {
     return false;
   }
@@ -54,9 +60,9 @@ export function useActualAccount(origin: string | null): string | null {
       try {
         const tabs = await chrome.tabs.query({
           currentWindow: true,
-          url: `${origin}/*`,
+          url: hostPattern(origin),
         });
-        const tab = pickTab(tabs);
+        const tab = pickTab(tabs.filter(candidate => candidate.url?.startsWith(`${origin}/`)));
         setAccountId(tab?.url ? accountFromUrl(tab.url, origin) : null);
       } catch {
         setAccountId(null);

@@ -14,6 +14,8 @@ All notable changes to this project are recorded here. The format follows
 
 - Connecting to an Actual server from the Firefox extension no longer fails
   because Firefox blocks the Actual API's background workers.
+- The Firefox extension now follows the account open in your Actual tab when
+  the server address has a port, such as `http://localhost:5006`.
 
 ## 0.5.2 - 2026-10-16
 
