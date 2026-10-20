@@ -10,6 +10,11 @@ All notable changes to this project are recorded here. The format follows
 
 - The extension has a new icon.
 
+### Fixed
+
+- Connecting to an Actual server from the Firefox extension no longer fails
+  because Firefox blocks the Actual API's background workers.
+
 ## 0.5.2 - 2026-10-16
 
 ### Fixed

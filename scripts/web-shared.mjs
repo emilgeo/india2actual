@@ -67,18 +67,66 @@ export async function buildCss() {
  * own chunk, loaded when the page first connects. Returns `{ name, data }` files.
  */
 export async function bundleAppSplit() {
+  const workers = [];
   const result = await build({
     entryPoints: { panel: resolve(root, 'web/main.tsx') },
     ...appOptions({ push: true, extension: true, worker: '' }),
+    plugins: [workersAsFiles(workers)],
     format: 'esm',
     splitting: true,
     outdir: 'out',
     chunkNames: 'chunk-[hash]',
   });
-  return result.outputFiles.map(file => ({
-    name: file.path.replace(/^.*[\\/]out[\\/]/, ''),
-    data: Buffer.from(file.contents),
-  }));
+  return [
+    ...result.outputFiles.map(file => ({
+      name: file.path.replace(/^.*[\\/]out[\\/]/, ''),
+      data: Buffer.from(file.contents),
+    })),
+    ...workers,
+  ];
+}
+
+/**
+ * The Actual API starts its two workers from blob: URLs, which an extension page
+ * may not do (Firefox blocks them under `script-src 'self'`). Their code is moved
+ * into files beside the page and the API starts those instead. The build fails
+ * if the API's code no longer looks as expected.
+ */
+function workersAsFiles(files) {
+  return {
+    name: 'workers-as-files',
+    setup(b) {
+      b.onLoad({ filter: /@actual-app[\\/]api[\\/]dist[\\/]browser\.js$/ }, args => {
+        let source = readFileSync(args.path, 'utf8');
+
+        const idb = /\bs = o\("([A-Za-z0-9+/=]+)", [^,]+, [^)]+\)/.exec(source);
+        const loader = source.indexOf(', L = typeof self < "u" && self.Blob');
+        const start = source.lastIndexOf('I = "', loader);
+        const fnStart = source.indexOf('function R(e) {', start);
+        const fnEnd = source.indexOf('\n}\n', fnStart) + 3;
+        if (!idb || loader < 0 || start < 0 || fnStart < 0 || fnEnd < fnStart) {
+          throw new Error('The Actual API worker code changed; update workersAsFiles in scripts/web-shared.mjs.');
+        }
+
+        const backend = new Function(`return ${source.slice(start + 4, loader)}`)();
+        files.push(
+          { name: 'actual-worker.js', data: Buffer.from(backend) },
+          { name: 'actual-idb-worker.js', data: Buffer.from(idb[1], 'base64') },
+        );
+
+        source =
+          source.slice(0, start) +
+          'I = "";\n' +
+          "function R(e) { return new Worker('actual-worker.js', { name: e?.name }); }\n" +
+          source.slice(fnEnd);
+        source = source.replace(
+          idb[0],
+          "s = function (options) { return new Worker('actual-idb-worker.js', options); }",
+        );
+        return { contents: source, loader: 'js' };
+      });
+    },
+  };
 }
 
 /** The app as one script. `push` carries the Actual API, `extension` is for the side panel. */

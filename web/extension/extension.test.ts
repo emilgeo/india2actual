@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EXTENSION_POLICY, manifestFor } from '../../scripts/extension-manifest.mjs';
 import { crc32, zip } from '../../scripts/pack.mjs';
+import { bundleAppSplit } from '../../scripts/web-shared.mjs';
 
 import { accountFromUrl, pickTab } from './follow.js';
 
@@ -116,4 +117,20 @@ describe('the icons', () => {
     expect(png.readUInt32BE(16)).toBe(size);
     expect(png.readUInt32BE(20)).toBe(size);
   });
+});
+
+describe('the extension bundle', () => {
+  it('starts the Actual workers from files, since extension pages may not use blob: workers', async () => {
+    const files = await bundleAppSplit();
+    const names = files.map(file => file.name);
+
+    expect(names).toContain('actual-worker.js');
+    expect(names).toContain('actual-idb-worker.js');
+    for (const { name, data } of files) {
+      const text = data.toString();
+      // The blob bootstrap of the backend worker, and the base64 of the IndexedDB worker.
+      expect(text, name).not.toContain('revokeObjectURL(self.location.href)');
+      expect(text, name).not.toContain('Lyogcm9sbHVwLXBsdWdpbi13ZWItd29ya2Vy');
+    }
+  }, 120_000);
 });
