@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+## 0.5.3 - 2026-10-20
+
 ### Changed
 
 - The extension has a new icon.
