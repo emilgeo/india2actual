@@ -93,13 +93,95 @@ body {
   color: #fff;
 }
 
+/* The extension choice inside the ways box, with its store badges. */
+.ways .ext {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+  background-color: var(--sl-color-bg);
+  text-align: center;
+}
+
+.ways .ext h3 {
+  margin-top: 0;
+  color: var(--sl-color-text-accent);
+}
+
+.install-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.install-buttons .badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-width: 11.5rem;
+  padding: 0.6rem 1.15rem 0.6rem 0.9rem;
+  border: 1.5px solid var(--sl-color-white);
+  border-radius: 0.7rem;
+  color: var(--sl-color-white);
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.install-buttons .badge:hover {
+  background-color: var(--sl-color-white);
+  color: var(--sl-color-black);
+}
+
+.install-buttons .badge img {
+  margin: 0;
+}
+
+.install-buttons .badge small,
+.install-buttons .badge strong {
+  display: block;
+  line-height: 1.15;
+}
+
+.install-buttons .badge small {
+  font-size: var(--sl-text-xs);
+  opacity: 0.75;
+}
+
+.install-buttons .badge strong {
+  font-size: var(--sl-text-lg);
+}
+
+.install-note {
+  margin-top: 1rem;
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-xs);
+}
+
 /* The row of ways to use the tool, set apart so visitors see there is a choice. */
 .ways {
   margin-block: 2rem;
   padding: 1.5rem;
-  border: 1px solid var(--sl-color-accent);
+  border: 1px solid var(--sl-color-hairline);
   border-radius: 0.75rem;
-  background-color: var(--sl-color-accent-low);
+  background-color: var(--sl-color-gray-6);
+}
+
+/* The home page's example table fits a phone: long references wrap instead of scrolling out of view. */
+[data-has-hero] .sl-markdown-content table {
+  display: table;
+  width: 100%;
+}
+
+[data-has-hero] .sl-markdown-content th:first-child {
+  width: 62%;
+}
+
+[data-has-hero] td code {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .ways h2 {
@@ -108,6 +190,7 @@ body {
 
 .ways .sl-link-card {
   background-color: var(--sl-color-bg);
+  text-align: center;
 }
 
 .ways .sl-link-card .title {
@@ -224,7 +307,7 @@ body {
 }
 
 .demo {
-  margin: 0 0 2rem;
+  margin: 2rem 0;
   text-align: center;
 }
 
@@ -233,7 +316,8 @@ body {
   margin-inline: auto;
   max-width: 100%;
   height: auto;
-  border: 1px solid var(--sl-color-hairline);
+  border: 1px solid var(--sl-color-gray-5);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
   border-radius: 0.75rem;
 }
 

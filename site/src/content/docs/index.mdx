@@ -12,29 +12,13 @@ hero:
     - text: Convert in your browser
       link: /convert/
       icon: laptop
-    - text: Documentation
-      link: /docs/
-      icon: open-book
-      variant: secondary
-    - text: More ways to use it
-      link: '#more-ways-to-use-india2actual'
-      icon: down-caret
-      variant: minimal
-    - text: View on GitHub
-      link: https://github.com/emilgeo/india2actual
-      icon: external
-      variant: minimal
 ---
 
 import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-<p class="demo">
-  <img src="/demo.gif" width="680" alt="A sample statement dropped on the Convert page: the balance check passes, UPI lines become payee names, one payee is named by hand, and a file for Actual is downloaded." />
-</p>
-
 <div class="ways">
 
-## More ways to use india2actual
+## Use it your way
 
 The Convert page is the quickest start. These give the same checks and the same
 real payee names, and fit other ways of working.
@@ -50,43 +34,24 @@ real payee names, and fit other ways of working.
     description="Best for skipping the import step. One file you open from your computer, which sends statements straight into Actual."
     href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual.html"
   />
-  <LinkCard
-    title="Chrome extension"
-    description="Best if you import often. The push page in the browser's side panel, next to Actual."
-    href="https://chromewebstore.google.com/detail/india2actual/cbeekejjcglkmapbodojkijnicoeenec"
-  />
-  <LinkCard
-    title="Firefox add-on"
-    description="The same push page in Firefox's sidebar, next to Actual. Installs from Firefox Add-ons."
-    href="https://addons.mozilla.org/addon/india2actual/"
-  />
 </CardGrid>
+
+<div class="ext">
+
+### Browser extension
+
+Best if you import often. The push page in your side panel, with your Actual account preselected.
+
+<p class="install-buttons">
+  <a class="badge" target="_blank" rel="noopener noreferrer" href="https://chromewebstore.google.com/detail/india2actual/cbeekejjcglkmapbodojkijnicoeenec"><img src="/logos/chrome.svg" alt="" width="30" height="30" /><span><small>Add to</small><strong>Chrome</strong></span><span class="sr-only">(opens in a new tab)</span></a>
+  <a class="badge" target="_blank" rel="noopener noreferrer" href="https://addons.mozilla.org/addon/india2actual/"><img src="/logos/firefox.svg" alt="" width="30" height="30" /><span><small>Add to</small><strong>Firefox</strong></span><span class="sr-only">(opens in a new tab)</span></a>
+</p>
+
+<p class="install-note">Chrome and the Chrome logo are trademarks of Google LLC. Firefox and the Firefox logo are trademarks of the Mozilla Foundation. india2actual is not affiliated with or endorsed by either.</p>
 
 </div>
 
-## Why this exists
-
-Actual has no bank sync for Indian banks, and is unlikely to get one soon.
-Reading bank data in India goes through the Account Aggregator framework, which
-is open to registered financial institutions with a commercial contract, not to
-a free open-source app. So the route is to download a statement and import it.
-india2actual makes that painless.
-
-## Try it
-
-```bash
-npx india2actual statement.csv
-```
-
-It reads CSV, Excel and PDF statements (including password-protected PDFs) and
-writes a file you can import into Actual. You need Node.js 22.14 or newer.
-
-## No terminal? Use your browser
-
-The [Convert page](/convert/) does the same job in your browser: drop a
-statement, check it, give any unclear payee a name, and download a file for
-Actual. Nothing is uploaded, and the page is not allowed to make network
-requests, so your statement never leaves your computer.
+</div>
 
 ## What it fixes
 
@@ -100,22 +65,28 @@ number each time, so Actual sees two payees:
 
 The bank's original text is kept in Notes, so nothing is lost.
 
-<CardGrid stagger>
+<p class="demo">
+  <img src="/demo.gif" width="680" alt="A sample statement dropped on the Convert page: the balance check passes, UPI lines become payee names, one payee is named by hand, and a file for Actual is downloaded." />
+</p>
+
+## Which banks work
+
+Tested on real statements: ICICI (savings and credit card, PDF), Federal Bank
+(savings, PDF), IDFC FIRST Bank (Excel) and CSB Bank (CSV). Other banks are
+expected to work but are not yet confirmed. See the full list in the
+[docs](/docs/#supported-banks), and if you try one, a report of what worked or
+failed is very welcome.
+
+## What else it does
+
+<CardGrid>
   <Card title="Real payee names" icon="pencil">
     UPI, NEFT, IMPS, card and ATM lines become one clean payee each, so reports
     by payee and category learning work.
   </Card>
-  <Card title="Checks its own work" icon="magnifier">
-    Every amount is checked against the statement's own balance, or a card
-    statement's printed totals. If it does not add up, nothing is written.
-  </Card>
   <Card title="Credit cards too" icon="document">
     Card statements are read with the right signs, payments are recognised, and
     a card payment can be linked as a transfer with your bank account.
-  </Card>
-  <Card title="Import or push" icon="rocket">
-    Write a CSV for Actual's import dialog, or send the transactions straight
-    into your budget.
   </Card>
   <Card title="Safe to re-run" icon="setting">
     Importing overlapping statements does not create duplicates.
@@ -126,10 +97,10 @@ The bank's original text is kept in Notes, so nothing is lost.
   </Card>
 </CardGrid>
 
-## Which banks work
+## Why this exists
 
-Tested on real statements: ICICI (savings and credit card, PDF), Federal Bank
-(savings, PDF), IDFC FIRST Bank (Excel) and CSB Bank (CSV). Other banks are
-expected to work but are not yet confirmed. See the full list in the
-[docs](/docs/#supported-banks), and if you try one, a report of what worked or
-failed is very welcome.
+Actual has no bank sync for Indian banks, and is unlikely to get one soon.
+Reading bank data in India goes through the Account Aggregator framework, which
+is open to registered financial institutions with a commercial contract, not to
+a free open-source app. So the route is to download a statement and import it.
+india2actual makes that painless.
