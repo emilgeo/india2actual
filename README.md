@@ -20,7 +20,7 @@ with **real payee names instead of UPI reference strings**.
     <b>More ways to use it:</b><br />
     <a href="#quick-start">Command line</a> |
     <a href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual.html">Push page (.html)</a> |
-    <a href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual-extension.zip">Chrome extension (.zip)</a> |
+    <a href="https://chromewebstore.google.com/detail/india2actual/cbeekejjcglkmapbodojkijnicoeenec">Chrome extension</a> |
     <a href="https://addons.mozilla.org/addon/india2actual/">Firefox add-on</a>
   </p>
   <p>
@@ -130,13 +130,14 @@ side panel (Chrome) or sidebar (Firefox), next to Actual, so everything stays in
 one window. Open an account in Actual and the panel preselects that account for
 the statement you drop in.
 
-In Firefox 142 or newer, install it from
-[Firefox Add-ons](https://addons.mozilla.org/addon/india2actual/), then click
-the toolbar icon.
+Install it from the
+[Chrome Web Store](https://chromewebstore.google.com/detail/india2actual/cbeekejjcglkmapbodojkijnicoeenec)
+or from [Firefox Add-ons](https://addons.mozilla.org/addon/india2actual/), then
+click the toolbar icon. Firefox 142 or newer is needed.
 
-In Chrome, each release has `india2actual-extension.zip`. It is not in the
-Chrome Web Store, so unzip it, open `chrome://extensions`, turn on Developer
-mode, choose Load unpacked and pick the folder, then click the toolbar icon.
+Each release also has `india2actual-extension.zip`, the Chrome build, for
+installing by hand: unzip it, open `chrome://extensions`, turn on Developer
+mode, choose Load unpacked and pick the folder.
 
 To avoid typing the server password each time, tick Stay connected on this
 device. The extension then keeps a sign-in token, never the password, and next
