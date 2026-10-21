@@ -86,6 +86,13 @@ body {
   }
 }
 
+/* Dark theme's filled button uses the light theme's purple instead of a pale tint. */
+:root:not([data-theme='light']) .sl-link-button.primary {
+  border-color: #5c3dbb;
+  background-color: #5c3dbb;
+  color: #fff;
+}
+
 /* The row of ways to use the tool, set apart so visitors see there is a choice. */
 .ways {
   margin-block: 2rem;
