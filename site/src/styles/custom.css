@@ -193,6 +193,29 @@ body {
   display: none;
 }
 
+.site-nav {
+  display: none;
+  gap: 1.25rem;
+  margin-inline-start: 1.5rem;
+  font-size: var(--sl-text-sm);
+}
+
+.site-nav a {
+  color: var(--sl-color-gray-2);
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  color: var(--sl-color-white);
+}
+
+@media (min-width: 50rem) {
+  .site-nav {
+    display: flex;
+    align-items: center;
+  }
+}
+
 .demo {
   margin: 0 0 2rem;
   text-align: center;
