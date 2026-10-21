@@ -20,8 +20,8 @@ with **real payee names instead of UPI reference strings**.
     <b>More ways to use it:</b><br />
     <a href="#quick-start">Command line</a> |
     <a href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual.html">Push page (.html)</a> |
-    <a href="https://chromewebstore.google.com/detail/india2actual/cbeekejjcglkmapbodojkijnicoeenec">Chrome extension</a> |
-    <a href="https://addons.mozilla.org/addon/india2actual/">Firefox add-on</a>
+    <a href="https://chromewebstore.google.com/detail/india2actual/cbeekejjcglkmapbodojkijnicoeenec"><img src="site/public/logos/chrome.svg" width="16" height="16" alt="" align="absmiddle"> Chrome extension</a> |
+    <a href="https://addons.mozilla.org/addon/india2actual/"><img src="site/public/logos/firefox.svg" width="16" height="16" alt="" align="absmiddle"> Firefox add-on</a>
   </p>
   <p>
     <a href="https://github.com/emilgeo/india2actual/issues">Report a problem</a>
@@ -131,9 +131,13 @@ one window. Open an account in Actual and the panel preselects that account for
 the statement you drop in.
 
 Install it from the
-[Chrome Web Store](https://chromewebstore.google.com/detail/india2actual/cbeekejjcglkmapbodojkijnicoeenec)
-or from [Firefox Add-ons](https://addons.mozilla.org/addon/india2actual/), then
+[<img src="site/public/logos/chrome.svg" width="16" height="16" alt="" align="absmiddle"> Chrome Web Store](https://chromewebstore.google.com/detail/india2actual/cbeekejjcglkmapbodojkijnicoeenec)
+or from [<img src="site/public/logos/firefox.svg" width="16" height="16" alt="" align="absmiddle"> Firefox Add-ons](https://addons.mozilla.org/addon/india2actual/), then
 click the toolbar icon. Firefox 142 or newer is needed.
+
+<sub>Chrome and the Chrome logo are trademarks of Google LLC. Firefox and the
+Firefox logo are trademarks of the Mozilla Foundation. india2actual is not
+affiliated with or endorsed by either.</sub>
 
 Each release also has `india2actual-extension.zip`, the Chrome build, for
 installing by hand: unzip it, open `chrome://extensions`, turn on Developer
