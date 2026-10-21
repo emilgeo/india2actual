@@ -1,6 +1,6 @@
 ---
 title: Privacy
-description: What the india2actual command line tool, browser pages and Chrome extension do with your data. In short, nothing leaves your computer except what you send to your own Actual server.
+description: What the india2actual command line tool, browser pages and Chrome and Firefox extension do with your data. In short, nothing leaves your computer except what you send to your own Actual server.
 ---
 
 india2actual reads bank and credit card statements, which are private. This page
@@ -43,12 +43,14 @@ What they keep in your browser, on your computer only:
 Passwords you type, for a PDF or for Actual, stay in the page and are gone when
 you close it.
 
-## The Chrome extension
+## The Chrome and Firefox extension
 
-It is the same page, shown in the browser's side panel, and it narrows itself
-to your server the same way. It asks for:
+It is the same page, shown in the browser's side panel (Chrome) or sidebar
+(Firefox), and it narrows itself to your server the same way. Firefox's own
+data collection declaration for it says it collects no data. It asks for:
 
-- **Side panel**, to show the panel.
+- **Side panel** (Chrome), to show the panel. Firefox needs no permission for
+  its sidebar.
 - **Access to `localhost`**, so it can see which Actual account is open when
   your Actual server runs on your own computer.
 - **Optional access to a website you name**, asked for once when you connect,

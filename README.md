@@ -20,7 +20,8 @@ with **real payee names instead of UPI reference strings**.
     <b>More ways to use it:</b><br />
     <a href="#quick-start">Command line</a> |
     <a href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual.html">Push page (.html)</a> |
-    <a href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual-extension.zip">Chrome extension (.zip)</a>
+    <a href="https://github.com/emilgeo/india2actual/releases/latest/download/india2actual-extension.zip">Chrome extension (.zip)</a> |
+    <a href="https://addons.mozilla.org/addon/india2actual/">Firefox add-on</a>
   </p>
   <p>
     <a href="https://github.com/emilgeo/india2actual/issues">Report a problem</a>
@@ -122,14 +123,20 @@ in Actual, and one click undoes the import. You can also give a payee a category
 and have Actual remember it as a rule, send card payments as transfers, and
 pick payees you already have in Actual from a list.
 
-### A side panel in Chrome
+### A side panel in Chrome, a sidebar in Firefox
 
-The same push page is also available as a Chrome extension that opens in the
-browser's side panel, next to Actual, so everything stays in one window. Open an
-account in Actual and the panel preselects that account for the statement you
-drop in. Each release has `india2actual-extension.zip`. It is not in the Chrome
-Web Store, so unzip it, open `chrome://extensions`, turn on Developer mode,
-choose Load unpacked and pick the folder, then click the toolbar icon.
+The same push page is also available as a browser extension that opens in the
+side panel (Chrome) or sidebar (Firefox), next to Actual, so everything stays in
+one window. Open an account in Actual and the panel preselects that account for
+the statement you drop in.
+
+In Firefox 142 or newer, install it from
+[Firefox Add-ons](https://addons.mozilla.org/addon/india2actual/), then click
+the toolbar icon.
+
+In Chrome, each release has `india2actual-extension.zip`. It is not in the
+Chrome Web Store, so unzip it, open `chrome://extensions`, turn on Developer
+mode, choose Load unpacked and pick the folder, then click the toolbar icon.
 
 To avoid typing the server password each time, tick Stay connected on this
 device. The extension then keeps a sign-in token, never the password, and next
@@ -141,7 +148,7 @@ a token does not expire unless the server is set to expire it, and it sits in th
 extension's storage in your browser profile, so anyone with access to that
 profile could use it. The downloadable page never keeps a sign-in.
 
-It asks for little: the side panel itself, access to `localhost`, and, when you
+It asks for little: the side panel itself (Chrome only), access to `localhost`, and, when you
 connect, optional access to the address of your own Actual server so it can see
 which account is open. It reads only the address of that tab. The website's
 Privacy page has the details.
