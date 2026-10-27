@@ -59,15 +59,15 @@
   },
   "devDependencies": {
     "@actual-app/sync-server": "^26.10.0",
-    "@playwright/test": "^1.64.0",
-    "@types/chrome": "^0.3.5",
+    "@playwright/test": "^1.64.1",
+    "@types/chrome": "^0.3.6",
     "@types/node": "^22.10.0",
     "esbuild": "^0.28.2",
-    "preact": "^11.0.1",
+    "preact": "^11.0.2",
     "selenium-webdriver": "^4.51.0",
     "tsx": "^4.23.15",
     "typescript": "^5.7.0",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.5"
   },
   "engines": {
     "node": ">=22.14"
