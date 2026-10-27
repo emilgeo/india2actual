@@ -21,6 +21,7 @@
   --warn-soft: #fdf1d3;
   --nav: #ffffff;
   --nav-line: #ebe9f3;
+  --nav-soft: #334e68;
   --brand: #5c3dbb;
   --wm-two: #e8892b;
   --wm-ac: #8719e0;
@@ -47,6 +48,7 @@
     --warn-soft: #3a2f12;
     --nav: #102a43;
     --nav-line: #0b1726;
+    --nav-soft: #bcccdc;
     --brand: #d9c2fa;
     --wm-two: #f2a65a;
     --wm-ac: #b37cf2;
@@ -72,6 +74,7 @@
   --warn-soft: #3a2f12;
   --nav: #102a43;
   --nav-line: #0b1726;
+  --nav-soft: #bcccdc;
   --brand: #d9c2fa;
   --wm-two: #f2a65a;
   --wm-ac: #b37cf2;
@@ -185,6 +188,34 @@ h4 {
   background: var(--nav);
 }
 
+.sitebar-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.sitebar-nav {
+  display: none;
+  gap: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.sitebar-nav a {
+  color: var(--nav-soft);
+  text-decoration: none;
+}
+
+.sitebar-nav a:hover,
+.sitebar-nav a[aria-current='page'] {
+  color: var(--ink);
+}
+
+@media (min-width: 50rem) {
+  .sitebar-nav {
+    display: flex;
+  }
+}
+
 .sitebar-name {
   color: var(--brand);
   font-size: 1.5rem;
@@ -238,6 +269,49 @@ h4 {
   background: transparent;
   font-size: 0.875rem;
   cursor: pointer;
+}
+
+.theme-compact {
+  position: relative;
+  gap: 0;
+  color: var(--nav-soft);
+}
+
+.theme-compact:hover {
+  color: var(--ink);
+}
+
+.sitebar .theme-compact select {
+  appearance: none;
+  color: inherit;
+  padding: 0.625rem 2rem 0.625rem 1.625rem;
+  margin-inline: -0.5rem;
+  width: calc(6.25em + 1rem);
+}
+
+.sitebar .theme-compact option {
+  background-color: var(--nav);
+  color: var(--ink);
+}
+
+.theme-icon,
+.theme-caret {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.theme-icon {
+  inset-inline-start: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.theme-caret {
+  inset-inline-end: 0;
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .hero h1 {

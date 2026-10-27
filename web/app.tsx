@@ -49,11 +49,21 @@ function IconLink({ href, name, label }: { href: string; name: keyof typeof ICON
   );
 }
 
+const LAPTOP_ICON =
+  'M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z';
+const CARET_ICON =
+  'M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z';
+
 function ThemePicker({ labelled }: { labelled: boolean }) {
   const [theme, setTheme] = useState<Theme>(() => loadTheme(storage));
   return (
-    <div class="theme">
+    <div class={labelled ? 'theme' : 'theme theme-compact'}>
       {labelled ? <label for="theme">Theme</label> : null}
+      {labelled ? null : (
+        <svg class="theme-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+          <path d={LAPTOP_ICON} />
+        </svg>
+      )}
       <select
         id="theme"
         aria-label={labelled ? undefined : 'Theme'}
@@ -69,6 +79,11 @@ function ThemePicker({ labelled }: { labelled: boolean }) {
           <option value={name}>{THEME_LABELS[name]}</option>
         ))}
       </select>
+      {labelled ? null : (
+        <svg class="theme-caret" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+          <path d={CARET_ICON} />
+        </svg>
+      )}
     </div>
   );
 }
@@ -114,9 +129,17 @@ function SideNav() {
 function SiteHeader() {
   return (
     <header class="sitebar">
-      <a class="sitebar-name" href="/">
-        <Wordmark />
-      </a>
+      <div class="sitebar-left">
+        <a class="sitebar-name" href="/">
+          <Wordmark />
+        </a>
+        <nav class="sitebar-nav" aria-label="Site">
+          <a href="/convert/" aria-current="page">
+            Convert
+          </a>
+          <a href="/docs/">Documentation</a>
+        </nav>
+      </div>
       <div class="sitebar-right">
         <IconLink href="https://github.com/emilgeo/india2actual" name="github" label="GitHub" />
         <IconLink href="https://www.npmjs.com/package/india2actual" name="npm" label="npm" />
