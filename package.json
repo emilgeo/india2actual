@@ -61,7 +61,7 @@
     "@actual-app/sync-server": "^26.10.0",
     "@playwright/test": "^1.64.1",
     "@types/chrome": "^0.3.7",
-    "@types/node": "^22.10.0",
+    "@types/node": "^26.6.6",
     "esbuild": "^0.28.2",
     "preact": "^11.1.0",
     "selenium-webdriver": "^4.52.0",
