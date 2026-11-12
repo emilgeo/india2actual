@@ -80,12 +80,11 @@ function continues(
   );
 }
 
-function join(first: Table, next: Table): Table {
+function join(first: Table, next: Table, headerIndex: number): Table {
   const totals = [...(first.totals ?? []), ...(next.totals ?? [])];
   return {
     ...first,
-    // The next table's first row is its repeated header.
-    rows: [...first.rows, ...next.rows.slice(1)],
+    rows: [...first.rows, ...next.rows.slice(headerIndex + 1)],
     ...(totals.length ? { totals } : {}),
   };
 }
@@ -111,7 +110,7 @@ export function interpretSections(
 
     const previous = sections[sections.length - 1];
     if (previous && continues(previous, table, result)) {
-      const joined = join(previous.table, table);
+      const joined = join(previous.table, table, result.header.index);
       const rejoined = interpretTable(joined, options);
       if (rejoined) {
         sections[sections.length - 1] = {

@@ -465,8 +465,11 @@ async function handleSection(
     );
   }
 
+  const headerLocation = header.index < 0
+    ? 'Headerless transaction layout'
+    : `Header on row ${header.index + 1}`;
   log(
-    `Header on row ${header.index + 1}; columns: ${Object.entries(header.map)
+    `${headerLocation}; columns: ${Object.entries(header.map)
       .map(([role, column]) => `${role}=${column}`)
       .join(', ')}`,
   );
