@@ -52,7 +52,7 @@
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^5.12.0",
     "node-html-parser": "^9.0.4",
-    "pdfjs-dist": "^6.3.289"
+    "pdfjs-dist": "^6.5.438"
   },
   "optionalDependencies": {
     "@actual-app/api": "^26.10.0"
