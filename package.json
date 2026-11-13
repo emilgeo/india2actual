@@ -51,23 +51,23 @@
     "csv-stringify": "^6.9.0",
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^5.12.0",
-    "node-html-parser": "^9.0.4",
     "pdfjs-dist": "^6.5.438"
+    "node-html-parser": "^9.0.7"
   },
   "optionalDependencies": {
     "@actual-app/api": "^26.10.0"
   },
   "devDependencies": {
-    "@actual-app/sync-server": "^26.10.0",
-    "@playwright/test": "^1.64.1",
+    "@actual-app/sync-server": "^26.11.0",
+    "@playwright/test": "^1.65.0",
     "@types/chrome": "^0.3.7",
     "@types/node": "^22.10.0",
     "esbuild": "^0.28.2",
-    "preact": "^11.1.0",
+    "preact": "^11.2.0",
     "selenium-webdriver": "^4.52.0",
     "tsx": "^4.23.15",
     "typescript": "^5.7.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "engines": {
     "node": ">=22.14"
