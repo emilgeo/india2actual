@@ -6,6 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Added
+
+- HSBC India credit card transaction-history CSV exports work without headers,
+  preserving their signed amounts and original descriptions.
+
 ## 0.5.3 - 2026-10-20
 
 ### Changed
