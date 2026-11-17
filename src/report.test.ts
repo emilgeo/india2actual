@@ -4,6 +4,7 @@ import type { Table } from './extract/types.js';
 import { interpretSections } from './interpret/sections.js';
 import { validateBalances } from './interpret/validate.js';
 import { buildReport, maskText } from './report.js';
+import { hsbcRows } from './testing/hsbc.js';
 
 function table(rows: string[][]): Table {
   return { rows, source: { path: 'test.csv', format: 'csv' } };
@@ -75,6 +76,15 @@ describe('maskText', () => {
 });
 
 describe('buildReport', () => {
+  it('reports a headerless layout without exposing the HSBC narration', () => {
+    const text = report(table(hsbcRows()));
+    expect(text).toContain('Header: absent (layout detected), columns date=0');
+    expect(text).toContain('Parsed 5 transaction(s)');
+    expect(text).not.toContain('ACME');
+    expect(text).not.toContain('11/03/2025');
+    expect(text).not.toContain('725.00');
+  });
+
   it('shows structure and counts', () => {
     const text = report(table(ROWS));
 

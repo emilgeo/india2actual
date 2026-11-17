@@ -296,10 +296,28 @@ Statements that do not print totals, such as a yearly summary, cannot be
 checked, and the tool says so. If a card statement is not recognised and the
 signs come out reversed, add `--card`.
 
-So far this has been tested on ICICI card statements only. Other issuers'
+Tested on ICICI PDF card statements and the HSBC India CSV export described
+below. Other issuers'
 conventions (a trailing `C` or `D`, a leading `+` on credits, `DR` and `CR`
 markers, and summary lines for finance charges and fees) are handled from public
 documentation of those layouts and are unverified.
+
+### HSBC India transaction history CSV
+
+The three-column HSBC India transaction-history export works without a header
+or `--card`. It contains a date, a description ending in another `DD/MM/YYYY`
+date and a masked card number (`•••• •••• •••• 0000`), and a signed amount.
+The date embedded in the description is used for Actual. The supplied amount
+signs are preserved: purchases are negative, repayments and refunds positive.
+The complete description stays in Notes; only the date/card suffix is removed
+for merchant lookup.
+
+Quoted multiline descriptions, blank rows and repeated Date/Description/Amount
+headings are supported. Unexpected rows, including summary or EMI schedule
+data mixed into this export, are refused rather than silently dropped. This
+CSV carries no statement totals, so its totals check is reported as skipped.
+Compare it with your card statement before importing. HSBC PDF and Excel
+layouts have not been verified and are not covered by this support.
 
 ### Card payments as transfers
 
@@ -389,6 +407,7 @@ What is most wanted (see [Supported banks](#supported-banks) for formats):
 | Bank                                    | Savings | Credit card |
 | --------------------------------------- | ------- | ----------- |
 | ICICI                                   | Tested  | Tested      |
+| HSBC India                              |         | Tested (CSV) |
 | Federal Bank, IDFC FIRST Bank, CSB Bank | Tested  |             |
 | HDFC, SBI, Axis, Kotak, IndusInd        | Wanted  | Wanted      |
 | PNB, Bank of Baroda, Canara, Yes Bank   | Wanted  |             |
@@ -415,6 +434,7 @@ bank that is already tested is useful too.
 | ----------------------------------------------------------------- | ----------- | ------------------------------------------- | ---------- |
 | ICICI                                                             | Savings     | PDF, including the monthly all-accounts PDF | Tested     |
 | ICICI                                                             | Credit card | PDF (annual and monthly Amazon Pay layouts) | Tested     |
+| HSBC India                                                        | Credit card | CSV (signed transaction-history export)     | Tested, no printed totals |
 | Federal Bank                                                      | Savings     | PDF                                         | Tested     |
 | IDFC FIRST Bank                                                   | Savings     | Excel, and the monthly all-accounts PDF     | Tested     |
 | CSB Bank                                                          | Savings     | CSV                                         | Tested     |

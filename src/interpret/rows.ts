@@ -5,6 +5,7 @@ import type { NarrationKind, PayeeSource } from '../narration/types.js';
 
 import { findHeader } from './header.js';
 import type { ColumnMap } from './header.js';
+import { readHsbcHistory } from './hsbc.js';
 import { parseAmount, parseStatementDate } from './values.js';
 import type { DateOrder } from './values.js';
 
@@ -200,9 +201,12 @@ export function interpretTable(
 ): Interpreted | null {
   let headerIndex = options.headerIndex;
   let map = options.columnMap;
+  const hsbc = headerIndex === undefined && !map
+    ? readHsbcHistory(table, options.dateOrder)
+    : null;
 
   if (headerIndex === undefined || !map) {
-    const detected = findHeader(table.rows);
+    const detected = hsbc?.header ?? findHeader(table.rows);
     if (!detected) {
       return null;
     }
@@ -210,7 +214,7 @@ export function interpretTable(
     map = map ?? detected.map;
   }
 
-  const card = options.card ?? detectCard(table, headerIndex);
+  const card = options.card ?? (hsbc !== null || detectCard(table, headerIndex));
   const transactions: StatementTransaction[] = [];
   const skipped: SkippedRow[] = [];
 
@@ -220,21 +224,24 @@ export function interpretTable(
       continue;
     }
 
+    const historyRow = hsbc?.rows.get(index);
     const dateCell = cell(row, map.date) || cell(row, map.valueDate);
-    const date = parseStatementDate(dateCell, options.dateOrder);
+    const date = historyRow?.transactionDate ??
+      parseStatementDate(dateCell, options.dateOrder);
     if (!date) {
       skipped.push({ index, reason: 'no parseable date', row });
       continue;
     }
 
-    const amount = resolveAmount(row, map, card);
+    // The history export is already signed; the generic card reversal would invert it.
+    const amount = historyRow?.amount ?? resolveAmount(row, map, card);
     if (amount === null) {
       skipped.push({ index, reason: 'no parseable amount', row });
       continue;
     }
 
     const narration = cell(row, map.description);
-    const parsed = parseNarration(narration, {
+    const parsed = parseNarration(historyRow?.description ?? narration, {
       ...(options.merchantRules
         ? { merchantRules: options.merchantRules }
         : {}),
@@ -249,7 +256,7 @@ export function interpretTable(
       date,
       amount,
       payee: parsed.merchant,
-      raw: parsed.raw,
+      raw: historyRow ? narration : parsed.raw,
       kind: parsed.kind,
       payeeSource: parsed.source,
       ...(parsed.rule ? { payeeRule: parsed.rule } : {}),

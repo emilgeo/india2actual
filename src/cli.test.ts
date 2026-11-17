@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { consolidatedLines } from './testing/fixtures.js';
 import { pdfFromLines } from './testing/pdf.js';
+import { hsbcCsv, hsbcRows } from './testing/hsbc.js';
 
 const root = resolve(import.meta.dirname, '..');
 const tsx = pathToFileURL(createRequire(import.meta.url).resolve('tsx')).href;
@@ -120,6 +121,38 @@ describe('the command line', () => {
     expect(out).toContain('layout report');
     expect(out).not.toContain('ACME');
     expect(out).not.toContain('9876543210');
+  });
+});
+
+describe('HSBC transaction history', () => {
+  it('converts a headerless signed CSV without --card and reports missing totals', () => {
+    const history = join(folder, 'history.csv');
+    writeFileSync(history, hsbcCsv());
+    const { code, err } = run([history]);
+    expect(code).toBe(0);
+    expect(err).toContain('Statement totals check skipped');
+    const csv = readFileSync(join(folder, 'history.actual.csv'), 'utf8');
+    expect(csv.trim().split('\n')).toHaveLength(6);
+    expect(csv).toContain('2025-03-11,Acme Store Pune,');
+    expect(csv).toContain(',-725.00,');
+    expect(csv).toContain(',1430.00,');
+  });
+
+  it('refuses an unsupported row before creating any output', () => {
+    const history = join(folder, 'malformed-history.csv');
+    writeFileSync(history, hsbcCsv([...hsbcRows(), ['bad date', 'bad description', 'bad amount']]));
+    const { code, err } = run([history]);
+    expect(code).toBe(1);
+    expect(err).toContain('HSBC transaction history: row 6');
+    expect(existsSync(join(folder, 'malformed-history.actual.csv'))).toBe(false);
+  });
+
+  it('refuses a history with no transactions', () => {
+    const history = join(folder, 'empty-history.csv');
+    writeFileSync(history, '');
+    const { code } = run([history]);
+    expect(code).toBe(1);
+    expect(existsSync(join(folder, 'empty-history.actual.csv'))).toBe(false);
   });
 });
 

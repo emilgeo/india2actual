@@ -130,12 +130,15 @@ function describeSection(section: ReportSection): string[] {
   const { table, result, checks } = section;
   const { header, transactions, skipped } = result;
   const headerRow = table.rows[header.index] ?? [];
+  const headerLocation = header.index < 0
+    ? 'absent (layout detected)'
+    : `row ${header.index + 1}`;
 
   const lines = [
     `Section ${section.number}`,
     `Rows extracted: ${table.rows.length}, cells ${cellCounts(table.rows)}`,
     `Account number found near the title: ${section.account ? 'yes' : 'no'}`,
-    `Header: row ${header.index + 1}, columns ${Object.entries(header.map)
+    `Header: ${headerLocation}, columns ${Object.entries(header.map)
       .map(([role, column]) => `${role}=${column}`)
       .join(', ')}`,
     `Header cells: ${headerRow.map(describeCell).join(' | ')}`,
