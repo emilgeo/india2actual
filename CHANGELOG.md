@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+## 0.5.4 - 2026-11-17
+
 ### Added
 
 - HSBC India credit card transaction-history CSV exports work without headers,
