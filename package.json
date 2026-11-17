@@ -55,7 +55,7 @@
     "pdfjs-dist": "^6.5.438"
   },
   "optionalDependencies": {
-    "@actual-app/api": "^26.10.0"
+    "@actual-app/api": "^26.11.0"
   },
   "devDependencies": {
     "@actual-app/sync-server": "^26.11.0",
