@@ -99,29 +99,38 @@ function workersAsFiles(files) {
       b.onLoad({ filter: /@actual-app[\\/]api[\\/]dist[\\/]browser\.js$/ }, args => {
         let source = readFileSync(args.path, 'utf8');
 
-        const idb = /\bs = o\("([A-Za-z0-9+/=]+)", [^,]+, [^)]+\)/.exec(source);
-        const loader = source.indexOf(', L = typeof self < "u" && self.Blob');
-        const start = source.lastIndexOf('I = "', loader);
-        const fnStart = source.indexOf('function R(e) {', start);
-        const fnEnd = source.indexOf('\n}\n', fnStart) + 3;
-        if (!idb || loader < 0 || start < 0 || fnStart < 0 || fnEnd < fnStart) {
+        // Minified names change between Actual releases, so they are captured, never hard-coded.
+        const idb = /\b([\w$]+) = [\w$]+\("([A-Za-z0-9+/=]{200,})", [^,]+, [^)]+\)/.exec(source);
+        const loader = /, [\w$]+ = typeof self < "u" && self\.Blob/.exec(source);
+        const equals = loader ? source.lastIndexOf('= "', loader.index) : -1;
+        const code = equals < 0 ? null : /([\w$]+) $/.exec(source.slice(Math.max(0, equals - 40), equals));
+        const fn = /function ([\w$]+)\(([\w$]+)\) \{/g;
+        fn.lastIndex = loader?.index ?? 0;
+        const fnMatch = loader ? fn.exec(source) : null;
+        const fnEnd = fnMatch ? source.indexOf('\n}\n', fnMatch.index) + 3 : -1;
+        if (
+          !idb || !loader || !code || !fnMatch || fnEnd < fnMatch.index ||
+          !source.slice(fnMatch.index, fnEnd).includes('new Worker(')
+        ) {
           throw new Error('The Actual API worker code changed; update workersAsFiles in scripts/web-shared.mjs.');
         }
 
-        const backend = new Function(`return ${source.slice(start + 4, loader)}`)();
+        const start = equals - code[0].length;
+        const backend = new Function(`return ${source.slice(equals + 2, loader.index)}`)();
         files.push(
           { name: 'actual-worker.js', data: Buffer.from(backend) },
-          { name: 'actual-idb-worker.js', data: Buffer.from(idb[1], 'base64') },
+          { name: 'actual-idb-worker.js', data: Buffer.from(idb[2], 'base64') },
         );
 
+        const [, fnName, param] = fnMatch;
         source =
           source.slice(0, start) +
-          'I = "";\n' +
-          "function R(e) { return new Worker('actual-worker.js', { name: e?.name }); }\n" +
+          `${code[1]} = "";\n` +
+          `function ${fnName}(${param}) { return new Worker('actual-worker.js', { name: ${param}?.name }); }\n` +
           source.slice(fnEnd);
         source = source.replace(
           idb[0],
-          "s = function (options) { return new Worker('actual-idb-worker.js', options); }",
+          () => `${idb[1]} = function (options) { return new Worker('actual-idb-worker.js', options); }`,
         );
         return { contents: source, loader: 'js' };
       });
