@@ -46,7 +46,7 @@ review, with one approval click as the last human check.
 ## Approaches considered
 
 - **A. Upload when a release is published, behind an approval gate (chosen).**
-  Jobs in `publish.yml`, protected by a GitHub environment with a required reviewer.
+  A separate workflow, protected by a GitHub environment with a required reviewer.
 - **B. A separate manual workflow** taking a tag. Same code, one extra click, no
   risk of submitting before looking. Easy to add later by adding a trigger.
 - **C. A local script.** Credentials on the maintainer's machine. Rejected.
@@ -57,8 +57,9 @@ A new workflow, `.github/workflows/store-upload.yml`, triggered by `workflow_run
 on the `Publish` workflow completing. Reasons: it only starts when every Publish
 job (npm, release assets) succeeded, so a version npm refused never reaches a
 store; it uses the workflow file from the default branch, not from the release
-tag, so a tag cannot carry altered upload code; the existing jobs are untouched.
-The tag name is `workflow_run.head_branch`. Both jobs skip pre-releases (queried
+tag; the upload script and the credentials run from the default branch, and the
+tag's code (the build) runs in a step with no secrets; the existing jobs are untouched.
+The tag name is `workflow_run.head_branch`; the tag is checked out by `head_sha`, not by name, so a same-named branch cannot stand in. `GH_TOKEN` is set only on the steps that call `gh`. Both jobs skip pre-releases (queried
 with `gh release view`) and run in the GitHub environment `extension-stores`.
 
 **Chrome job.**
@@ -80,7 +81,7 @@ with `gh release view`) and run in the GitHub environment `extension-stores`.
    `git archive --format=zip -o source.zip HEAD` of the checked-out tag, and the
    same version agreement check.
 2. `npx web-ext@10.8.0 sign --channel listed --source-dir dist-extension-firefox
-   --ignore-files india2actual-extension.zip --upload-source-code source.zip
+   --upload-source-code source.zip
    --amo-metadata extension/store/amo-metadata.json --timeout 600000
    --approval-timeout 0`. Credentials come from `WEB_EXT_API_KEY` and
    `WEB_EXT_API_SECRET` at step level, never flags. The job ends at submission;

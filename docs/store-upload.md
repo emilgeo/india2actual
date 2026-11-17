@@ -3,7 +3,12 @@
 After a GitHub release is published and the Publish workflow succeeds, the
 `Store upload` workflow submits that version to the Chrome Web Store and Firefox
 Add-ons for review. Nothing runs until you approve the `extension-stores`
-environment. Review by the stores still takes days. Pre-releases are skipped.
+environment, once for each store. Review by the stores still takes days.
+
+Pre-releases upload nothing, but the jobs still ask for approval and then finish
+green with every step skipped; decline them. Re-running only part of a finished
+Publish run starts this workflow again; decline that approval too, because the
+stores would reject the repeated version anyway.
 
 ## One-time setup
 
@@ -34,9 +39,10 @@ generate credentials. Secrets: `AMO_API_KEY`, `AMO_API_SECRET`.
 ## When something fails
 
 - Each job runs on its own; re-run only the failed one from the Actions page.
-- Chrome rejects a version it already has. If the upload worked but submitting
-  failed, open the item in the dashboard and submit the uploaded version there
-  (or cancel a pending submission first).
+- If Chrome's upload step fails or times out (it waits about 5 minutes), the
+  package may still have arrived. Open the item in the dashboard, check the
+  uploaded version, and submit it there. A submission already pending review
+  makes a new upload fail; cancel it in the dashboard first.
 - AMO rejects a repeated version number the same way.
 - A refresh token for an unverified Google Cloud app in testing mode expires
   after 7 days; publish the OAuth app to production to avoid that.
