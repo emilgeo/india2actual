@@ -30,6 +30,8 @@ function fakeFetch(replies: Record<string, Reply[]>) {
   return { fn, calls };
 }
 
+type Capture = { url: string; init: { headers?: Record<string, string>; body?: unknown } };
+
 const run = (fn: unknown, overrides: Record<string, string> = {}) =>
   uploadToChromeStore({
     zip: Buffer.from('zip'),
@@ -90,5 +92,55 @@ describe('uploadToChromeStore', () => {
     const { fn, calls } = fakeFetch({});
     await expect(run(fn, { CWS_REFRESH_TOKEN: '' })).rejects.toThrow('CWS_REFRESH_TOKEN');
     expect(calls).toHaveLength(0);
+  });
+
+  it('sends the bearer token and the review-bound publish body', async () => {
+    const seen: Capture[] = [];
+    const replies: Record<string, Reply[]> = {
+      '/token': [{ body: { access_token: 'tok' } }],
+      ':upload': [{ body: { uploadState: 'SUCCEEDED' } }],
+      ':publish': [{ body: { state: 'PENDING_REVIEW' } }],
+    };
+    const inner = fakeFetch(replies).fn;
+    await run((url: string, init: Capture['init']) => {
+      seen.push({ url, init });
+      return inner(url);
+    });
+    const publish = seen.find(call => call.url.endsWith(':publish'))!;
+    expect(publish.init.headers?.authorization).toBe('Bearer tok');
+    expect(JSON.parse(String(publish.init.body))).toEqual({
+      publishType: 'DEFAULT_PUBLISH',
+      skipReview: false,
+      blockOnWarnings: false,
+    });
+  });
+
+  it('gives up when the upload stays in progress', async () => {
+    const { fn, calls } = fakeFetch({
+      '/token': [{ body: { access_token: 'tok' } }],
+      ':upload': [{ body: { uploadState: 'IN_PROGRESS' } }],
+      ':fetchStatus': Array.from({ length: 30 }, () => ({ body: { lastAsyncUploadState: 'IN_PROGRESS' } })),
+    });
+    await expect(run(fn)).rejects.toThrow('did not succeed');
+    expect(calls.some(url => url.endsWith(':publish'))).toBe(false);
+  });
+
+  it('fails when the token exchange is refused', async () => {
+    const { fn } = fakeFetch({ '/token': [{ status: 400, body: { error: 'invalid_grant' } }] });
+    await expect(run(fn)).rejects.toThrow('invalid_grant');
+  });
+
+  it('reports a reply that is not JSON', async () => {
+    const calls: string[] = [];
+    const fn = async (url: string) => {
+      calls.push(url);
+      return { ok: true, status: 200, text: async () => '<html>oops</html>' };
+    };
+    await expect(run(fn)).rejects.toThrow('not JSON');
+  });
+
+  it('fails when the token reply has no access token', async () => {
+    const { fn } = fakeFetch({ '/token': [{ body: {} }] });
+    await expect(run(fn)).rejects.toThrow('no access_token');
   });
 });

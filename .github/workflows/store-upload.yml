@@ -1,7 +1,8 @@
 name: Store upload
 
-# Runs only after the whole Publish workflow succeeded (npm, release assets), and
-# uses this file from the default branch, not from the release tag.
+# Runs only after the whole Publish workflow succeeded (npm, release assets).
+# The upload code and the credentials come from the default branch; the release
+# tag only supplies the files that are uploaded, and its code runs without secrets.
 on:
   workflow_run:
     workflows: [Publish]
@@ -15,22 +16,23 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'release' }}
     runs-on: ubuntu-latest
     # Approval on this environment is the last human check before any store credential is used.
+    # Each store job waits for its own approval.
     environment: extension-stores
     env:
       TAG: ${{ github.event.workflow_run.head_branch }}
-      GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Skip pre-releases
         id: kind
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           pre=$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)
           echo "pre=$pre" >> "$GITHUB_OUTPUT"
-      - name: Check out the release tag
+          if [ "$pre" != "false" ]; then echo "$TAG is a pre-release, nothing uploaded."; fi
+      - name: Check out the default branch
         if: steps.kind.outputs.pre == 'false'
         uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_branch }}
       - name: Set up Node
         if: steps.kind.outputs.pre == 'false'
         uses: actions/setup-node@v7
@@ -38,13 +40,14 @@ jobs:
           node-version: 24
       - name: Download the release extension and check it
         if: steps.kind.outputs.pre == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release download "$TAG" -p india2actual-extension.zip -p SHA256SUMS
           sha256sum -c --ignore-missing SHA256SUMS
-          package=$(node -p "require('./package.json').version")
           manifest=$(unzip -p india2actual-extension.zip manifest.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
-          if [ "$TAG" != "v$package" ] || [ "$package" != "$manifest" ]; then
-            echo "Version mismatch: tag $TAG, package.json $package, extension $manifest" >&2
+          if [ "$TAG" != "v$manifest" ]; then
+            echo "Version mismatch: tag $TAG, extension $manifest" >&2
             exit 1
           fi
       - name: Upload to the Chrome Web Store
@@ -63,27 +66,34 @@ jobs:
     environment: extension-stores
     env:
       TAG: ${{ github.event.workflow_run.head_branch }}
-      GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Skip pre-releases
         id: kind
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           pre=$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)
           echo "pre=$pre" >> "$GITHUB_OUTPUT"
+          if [ "$pre" != "false" ]; then echo "$TAG is a pre-release, nothing uploaded."; fi
+      - name: Check out the default branch
+        if: steps.kind.outputs.pre == 'false'
+        uses: actions/checkout@v7
       - name: Check out the release tag
         if: steps.kind.outputs.pre == 'false'
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+          path: tag
       - name: Set up Node
         if: steps.kind.outputs.pre == 'false'
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
+      # The tag's code runs here, in a step with no secrets.
       - name: Build the Firefox extension and the source package
         if: steps.kind.outputs.pre == 'false'
+        working-directory: tag
         run: |
           npm ci
           node scripts/build-extension.mjs --firefox
@@ -102,8 +112,7 @@ jobs:
         # Returns after submission: review takes days, so approval is not awaited.
         run: >
           npx --yes web-ext@10.8.0 sign
-          --source-dir dist-extension-firefox
-          --ignore-files india2actual-extension.zip
+          --source-dir tag/dist-extension-firefox
           --channel listed
           --upload-source-code "$RUNNER_TEMP/source.zip"
           --amo-metadata extension/store/amo-metadata.json

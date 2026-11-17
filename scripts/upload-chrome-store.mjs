@@ -12,7 +12,12 @@ async function call(fetchFn, url, init, what) {
   const response = await fetchFn(url, init);
   const text = await response.text();
   if (!response.ok) throw new Error(`${what} failed (HTTP ${response.status}): ${text}`);
-  return text ? JSON.parse(text) : {};
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`${what} returned something that is not JSON (HTTP ${response.status}): ${text.slice(0, 200)}`);
+  }
 }
 
 /**
@@ -39,6 +44,7 @@ export async function uploadToChromeStore({ zip, env, fetchFn = fetch, sleep = m
     },
     'Getting an access token',
   );
+  if (!token.access_token) throw new Error('Getting an access token returned no access_token.');
   const auth = { authorization: `Bearer ${token.access_token}` };
   const item = `publishers/${env.CWS_PUBLISHER_ID}/items/${env.CWS_EXTENSION_ID}`;
 
