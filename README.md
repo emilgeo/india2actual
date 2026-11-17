@@ -350,7 +350,7 @@ second transaction.
   API cannot link existing transactions.
 - With several cards, name the right card on each run.
 
-Tested against Actual 26.10.0.
+Tested against Actual 26.11.0.
 
 ## Statements with several accounts
 
