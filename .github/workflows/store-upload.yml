@@ -1,0 +1,111 @@
+name: Store upload
+
+# Runs only after the whole Publish workflow succeeded (npm, release assets), and
+# uses this file from the default branch, not from the release tag.
+on:
+  workflow_run:
+    workflows: [Publish]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  chrome:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'release' }}
+    runs-on: ubuntu-latest
+    # Approval on this environment is the last human check before any store credential is used.
+    environment: extension-stores
+    env:
+      TAG: ${{ github.event.workflow_run.head_branch }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Skip pre-releases
+        id: kind
+        run: |
+          pre=$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)
+          echo "pre=$pre" >> "$GITHUB_OUTPUT"
+      - name: Check out the release tag
+        if: steps.kind.outputs.pre == 'false'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+      - name: Set up Node
+        if: steps.kind.outputs.pre == 'false'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Download the release extension and check it
+        if: steps.kind.outputs.pre == 'false'
+        run: |
+          gh release download "$TAG" -p india2actual-extension.zip -p SHA256SUMS
+          sha256sum -c --ignore-missing SHA256SUMS
+          package=$(node -p "require('./package.json').version")
+          manifest=$(unzip -p india2actual-extension.zip manifest.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+          if [ "$TAG" != "v$package" ] || [ "$package" != "$manifest" ]; then
+            echo "Version mismatch: tag $TAG, package.json $package, extension $manifest" >&2
+            exit 1
+          fi
+      - name: Upload to the Chrome Web Store
+        if: steps.kind.outputs.pre == 'false'
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: node scripts/upload-chrome-store.mjs india2actual-extension.zip
+
+  firefox:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'release' }}
+    runs-on: ubuntu-latest
+    environment: extension-stores
+    env:
+      TAG: ${{ github.event.workflow_run.head_branch }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Skip pre-releases
+        id: kind
+        run: |
+          pre=$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)
+          echo "pre=$pre" >> "$GITHUB_OUTPUT"
+      - name: Check out the release tag
+        if: steps.kind.outputs.pre == 'false'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+      - name: Set up Node
+        if: steps.kind.outputs.pre == 'false'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Build the Firefox extension and the source package
+        if: steps.kind.outputs.pre == 'false'
+        run: |
+          npm ci
+          node scripts/build-extension.mjs --firefox
+          git archive --format=zip -o "$RUNNER_TEMP/source.zip" HEAD
+          package=$(node -p "require('./package.json').version")
+          manifest=$(node -p "require('./dist-extension-firefox/manifest.json').version")
+          if [ "$TAG" != "v$package" ] || [ "$package" != "$manifest" ]; then
+            echo "Version mismatch: tag $TAG, package.json $package, extension $manifest" >&2
+            exit 1
+          fi
+      - name: Submit to Firefox Add-ons
+        if: steps.kind.outputs.pre == 'false'
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+        # Returns after submission: review takes days, so approval is not awaited.
+        run: >
+          npx --yes web-ext@10.8.0 sign
+          --source-dir dist-extension-firefox
+          --ignore-files india2actual-extension.zip
+          --channel listed
+          --upload-source-code "$RUNNER_TEMP/source.zip"
+          --amo-metadata extension/store/amo-metadata.json
+          --timeout 600000
+          --approval-timeout 0
