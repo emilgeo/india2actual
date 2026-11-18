@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
@@ -41,7 +42,7 @@ describe('syncReadme', () => {
 
 describe('this repository', () => {
   it('names the locked Actual version in the README', () => {
-    const root = new URL('..', import.meta.url).pathname;
+    const root = fileURLToPath(new URL('..', import.meta.url));
     expect(syncReadme(root, { write: false }).changed).toBe(false);
   });
 });

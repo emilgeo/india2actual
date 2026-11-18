@@ -23,7 +23,7 @@ export function syncReadme(root, { write = true } = {}) {
     throw new Error('README.md has no "Tested against Actual" line to update');
   }
 
-  const updated = readme.replace(LINE, `$1${locked}`);
+  const updated = readme.replace(LINE, (_, prefix) => prefix + locked);
   if (updated === readme) {
     return { changed: false, version: locked };
   }
