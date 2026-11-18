@@ -1,7 +1,6 @@
 import type { LayoutLine, PdfLayout } from './extract/pdf.js';
 import type { Table } from './extract/types.js';
 import type { Interpreted } from './interpret/rows.js';
-import { roleForHeader } from './interpret/synonyms.js';
 import { diagnoseBalance, ranges } from './report-diagnosis.js';
 import type { Validation } from './interpret/validate.js';
 
@@ -56,7 +55,7 @@ const HEADING_WORDS = new Set(
     'deposits withdrawal withdrawals mode type cumulative cheque chq ref ' +
     'reference no number value dr cr inr rs of on for the to from period ' +
     'account statement summary savings current count amt bal remarks indicator ' +
-    'instrument'
+    'instrument txn tran trans dt narrative posting sr sl id branch code'
   ).split(' '),
 );
 
@@ -105,18 +104,12 @@ function clean(cell: string): string {
 }
 
 /**
- * Is this cell a column label, made only of heading words or a known role? Only
- * for the row already identified as the header: the role patterns are prefixes
- * and would also pass a name that begins with a column word.
+ * Is this cell a column label? Only words from the closed list qualify, also in
+ * the header row: the role patterns are prefixes and substrings, so they would
+ * pass any cell of a header row that happens to hold a name.
  */
 function isLabel(cell: string): boolean {
-  const text = clean(cell);
-  if (!text || text.length > MAX_LABEL || /\p{N}/u.test(text) || !LABEL.test(text)) {
-    return false;
-  }
-  const words = text.toLowerCase().match(/\p{L}+/gu) ?? [];
-  const known = words.length > 0 && words.every(word => HEADING_WORDS.has(word));
-  return known || roleForHeader(text) !== null;
+  return isHeadingWords(cell);
 }
 
 /** A label is shown as written, anything else is masked. */
@@ -127,7 +120,9 @@ function describeCell(cell: string): string {
 /**
  * Any row other than the header: a cell is written out only when it is made of
  * heading words from the closed list. A single such cell may be part of a
- * payee ("Dr" beside a name), so only a row with two or more shows any.
+ * payee ("Dr" beside a name), so only a row with two or more shows any. A
+ * Dr/Cr indicator column gives every row one, so a narration made only of list
+ * words is shown there; that reveals nothing beyond the words in the list.
  */
 function maskRow(row: string[]): string {
   const header = row.filter(isHeadingWords).length >= 2;
@@ -138,7 +133,9 @@ function maskRow(row: string[]): string {
 
 /** A PDF's page count is shown; a sheet name can be anything, so it is masked. */
 function partOf(part: string): string {
-  return /^\d+ page\(s\)$/.test(part) ? part : maskText(part);
+  return /^\d+ page\(s\)$/.test(part) || part === 'html-table' || part === 'SpreadsheetML'
+    ? part
+    : maskText(part);
 }
 
 function cellCounts(rows: string[][]): string {

@@ -252,6 +252,35 @@ describe('text that only looks like a column label', () => {
     expect(text).toContain('Header cells: Date | Narration | Amount | Dr/Cr | Balance');
   });
 
+  it('masks a name that sits in the header row among the labels', () => {
+    const header = [
+      'Date', 'Narration', 'Withdrawal Amt.', 'Deposit Amt.', 'Closing Balance',
+      'Crispin Dsouza', 'Sutra Textiles', 'Drew Barry', 'Detailers Remark',
+    ];
+    const text = report(table([header, ['12/03/2025', 'ACME STORE', '725.00', '', '9,275.00']]));
+    for (const secret of ['Crispin', 'Dsouza', 'Sutra', 'Textiles', 'Drew', 'Barry', 'Detailers']) {
+      expect(text).not.toContain(secret);
+    }
+    expect(text).toContain('Date | Narration | Withdrawal Amt. | Deposit Amt. | Closing Balance');
+  });
+
+  it('keeps common header words readable', () => {
+    const header = ['Tran Date', 'Value Dt', 'Chq./Ref.No.', 'Narrative', 'Debit Amount', 'Credit Amount', 'Balance'];
+    const text = report(table([header, ['12/03/2025', '12/03/2025', '', 'ACME STORE', '725.00', '', '9,275.00']]));
+    expect(text).toContain('Header cells: Tran Date | Value Dt | Chq./Ref.No. | Narrative | Debit Amount | Credit Amount | Balance');
+  });
+
+  it('keeps the extractor\'s own labels for an HTML table or SpreadsheetML file', () => {
+    const text = buildReport({
+      version: '0.0.0',
+      runtime: 'browser',
+      format: 'HTML table',
+      tables: [{ rows: [], source: { path: 'x.xls', format: 'xlsx', part: 'html-table' } }],
+      sections: [],
+    });
+    expect(text).toContain('File: HTML table, html-table');
+  });
+
   it('masks a name in the first rows when no table was found', () => {
     const text = buildReport({
       version: '0.0.0',
