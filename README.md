@@ -405,8 +405,8 @@ is recognised, and when no table was found it shows a short masked sample of
 where the rows sit on the page.
 
 Letters are printed as `x` and digits as `9`. Only common column words such as
-Date or Balance, and payment types such as UPI or NEFT, are written out. The report holds no names, account numbers or
-amounts, but the length of each amount stays visible, so it shows roughly how
+Date or Balance, and payment types such as UPI or NEFT, are written out. The report is built to hold no names, account numbers
+or amounts, but the length of each amount stays visible, so it shows roughly how
 large they are. Read it before you post it. An issue is public, and editing it
 later does not remove the first version. Please never attach or paste the
 statement itself, not even privately.
