@@ -2,10 +2,11 @@
 //
 // The page is the push page, as separate files because an extension page may
 // not carry inline script, and split into chunks because Firefox's add-on
-// checks do not read a file over 5 MB. `--firefox` builds the sidebar variant instead.
+// checks refuse a file of 5 MiB or more. `--firefox` builds the sidebar variant instead.
 import { mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { MAX_FILE_BYTES, oversizedFiles } from './extension-limits.mjs';
 import { manifestFor } from './extension-manifest.mjs';
 import { zip } from './pack.mjs';
 import { buildCss, buildWorker, bundleAppSplit, packageVersion, root } from './web-shared.mjs';
@@ -23,6 +24,15 @@ const files = [
   ...(await bundleAppSplit()),
   ...[16, 32, 48, 128].map(size => ({ name: `icons/${size}.png`, data: readFileSync(resolve(root, `extension/icons/${size}.png`)) })),
 ];
+
+const tooBig = oversizedFiles(files);
+if (tooBig.length > 0) {
+  for (const { name, size } of tooBig) {
+    console.error(`${name} is ${size} bytes, at or over the ${MAX_FILE_BYTES} limit.`);
+  }
+  console.error('The AMO add-on validator refuses a file of 5 MiB or more. Split the bundle (see bundleAppSplit).');
+  process.exit(1);
+}
 
 rmSync(outDir, { recursive: true, force: true });
 for (const { name, data } of files) {

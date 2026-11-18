@@ -37,5 +37,7 @@ jobs:
           git commit -m "docs: update the tested Actual version in the readme" README.md
           git push
           # A push made with the workflow token does not start other workflows,
-          # so the site, which is built from the README, is started explicitly.
+          # so the site, which is built from the README, and CI, which a release
+          # waits for on this commit, are started explicitly.
           gh workflow run site.yml
+          gh workflow run ci.yml --ref main
