@@ -8,7 +8,27 @@ permissions:
   contents: read
 
 jobs:
+  ci-gate:
+    # Nothing is published from a commit whose CI is red, cancelled or unfinished.
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      checks: read
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Wait for every CI check to pass on this commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/wait-for-ci.mjs
+
   npm:
+    needs: ci-gate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,7 +66,9 @@ jobs:
 
   pages:
     # The push page and the extension are attached to the release, with
-    # fingerprints, so what a person downloads can be checked.
+    # fingerprints, so what a person downloads can be checked. After npm, so a
+    # failed publish leaves no assets on the release.
+    needs: [ci-gate, npm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
