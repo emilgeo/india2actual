@@ -318,6 +318,35 @@ describe('PDF layout in the report', () => {
     expect(text).not.toContain('Balance');
   });
 
+  const rowsOnly = [dated([20, '12/03/2025'], [220, '725.00'])];
+
+  it('samples the rows of a table that was found but never read as transactions', () => {
+    const text = pdfReport({ ...base, all: { windowPage: 1, above: [], window: rowsOnly } });
+    expect(text).toContain('Text positions on page 1');
+    expect(text).toContain('x=20 99/99/9999');
+  });
+
+  it('prefers the rows no table took when other tables were read', () => {
+    const text = buildReport({
+      version: '0.0.0',
+      runtime: 'browser',
+      format: 'PDF',
+      tables: [table(ROWS)],
+      sections: interpretSections([table(ROWS)]).map((section, index) => ({
+        number: index + 1,
+        table: section.table,
+        result: section.result,
+        checks: [],
+      })),
+      layout: { ...base, all: { windowPage: 1, above: [], window: rowsOnly } },
+    });
+    expect(text).not.toContain('Text positions');
+  });
+
+  it('keeps the PDF block apart from the lines after it', () => {
+    expect(pdfReport(base)).toMatch(/Pages without a text layer: 2-3 .*\n\nRows extracted/);
+  });
+
   it('caps the pages listed', () => {
     const pages = Array.from({ length: 60 }, (_, index) => ({
       page: index + 1, items: 5, lines: 2, dateLines: 0, amountLines: 0, inTable: false,

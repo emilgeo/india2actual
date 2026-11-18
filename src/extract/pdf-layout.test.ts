@@ -30,6 +30,16 @@ describe('describePdfLayout', () => {
     expect(layout.window).toEqual([]);
   });
 
+  it('also offers the dated rows of a table, for when that table was never read as transactions', () => {
+    const lines = [HEADER(), ROW(680, 1), ROW(660, 1), ROW(640, 1)];
+    const layout = describePdfLayout(lines, 1);
+
+    expect(layout.window).toEqual([]);
+    expect(layout.all?.windowPage).toBe(1);
+    expect(layout.all?.window.length).toBe(3);
+    expect(layout.all?.above.map(entry => entry.items[0]?.text)).toEqual(['Date']);
+  });
+
   it('shows a page with no text as empty, even though it has no lines', () => {
     const layout = describePdfLayout([HEADER(), ROW(680, 1)], 3);
 

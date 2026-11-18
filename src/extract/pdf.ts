@@ -933,14 +933,31 @@ export type PdfPageLayout = {
  * What a report needs to tell "no text layer" from "no table recognised".
  * Raw text: only the report may decide what of it is shown.
  */
-export type PdfLayout = {
-  pages: PdfPageLayout[];
+export type LayoutSample = {
   /** The page the window is taken from. */
-  windowPage?: number;
-  /** Dated rows no table took, from the first of them on one page, capped. */
+  windowPage: number;
+  /** Dated rows from the first of them on one page, capped. */
   window: LayoutLine[];
   /** Up to two lines directly above the window, nearest last. */
   above: LayoutLine[];
+};
+
+/**
+ * What a report needs to tell "no text layer" from "no table recognised".
+ * Raw text: only the report may decide what of it is shown.
+ */
+export type PdfLayout = {
+  pages: PdfPageLayout[];
+  /** The dated rows no table took, or nothing when a table took them all. */
+  window: LayoutLine[];
+  windowPage?: number;
+  /** Up to two lines directly above the window, nearest last. */
+  above: LayoutLine[];
+  /**
+   * The first dated rows whether or not a table took them, for a report whose
+   * tables were found but never read as transactions.
+   */
+  all?: LayoutSample;
 };
 
 const AMOUNT_ITEM = /^\(?-?\d[\d,]*\.\d{2}\)?(\s?(cr|dr))?$/i;
@@ -956,18 +973,43 @@ const layoutLine = (line: Line): LayoutLine => ({
   items: line.items.map(item => ({ x: item.x, text: item.text })),
 });
 
+/** The first page with enough dated rows that pass `take`, from its first such row to its last. */
+function sampleOf(
+  lines: Line[],
+  pages: number,
+  take: (line: Line) => boolean,
+): LayoutSample | undefined {
+  const rowLike = (line: Line) => isAnchorLine(line) && amountItems(line) >= 2 && take(line);
+
+  for (let page = 1; page <= pages; page += 1) {
+    const indexes = lines.flatMap((line, index) =>
+      line.page === page && rowLike(line) ? [index] : [],
+    );
+    if (indexes.length < WINDOW_MIN_ROWS) {
+      continue;
+    }
+    const start = indexes[0] as number;
+    const end = indexes[indexes.length - 1] as number;
+    return {
+      windowPage: page,
+      window: lines.slice(start, end + 1).slice(0, WINDOW_LINES).map(layoutLine),
+      above: lines
+        .slice(Math.max(0, start - WINDOW_ABOVE), start)
+        .filter(line => line.page === page)
+        .map(layoutLine),
+    };
+  }
+  return undefined;
+}
+
 /**
  * Summarise a statement's text lines for a report. Reads the lines the tables
  * are built from and changes nothing, so importing is unaffected.
  */
 export function describePdfLayout(lines: Line[], pages: number): PdfLayout {
   const claimed = new Set(splitSections(lines).flatMap(section => section.lines));
-  const rowLike = (line: Line) => isAnchorLine(line) && amountItems(line) >= 2;
 
   const summary: PdfPageLayout[] = [];
-  let windowStart = -1;
-  let windowPage = 0;
-
   for (let page = 1; page <= pages; page += 1) {
     const onPage = lines.filter(line => line.page === page);
     summary.push({
@@ -978,31 +1020,16 @@ export function describePdfLayout(lines: Line[], pages: number): PdfLayout {
       amountLines: onPage.filter(line => amountItems(line) >= 2).length,
       inTable: onPage.some(line => isAnchorLine(line) && claimed.has(line)),
     });
-    if (windowStart < 0 && onPage.filter(line => rowLike(line) && !claimed.has(line)).length >= WINDOW_MIN_ROWS) {
-      windowPage = page;
-      windowStart = lines.findIndex(line => line.page === page && rowLike(line) && !claimed.has(line));
-    }
   }
 
-  if (windowStart < 0) {
-    return { pages: summary, window: [], above: [] };
-  }
-
-  let windowEnd = windowStart;
-  for (let i = windowStart; i < lines.length && lines[i]?.page === windowPage; i += 1) {
-    if (rowLike(lines[i] as Line) && !claimed.has(lines[i] as Line)) {
-      windowEnd = i;
-    }
-  }
-
-  const above = lines
-    .slice(Math.max(0, windowStart - WINDOW_ABOVE), windowStart)
-    .filter(line => line.page === windowPage);
+  const unclaimed = sampleOf(lines, pages, line => !claimed.has(line));
+  const all = sampleOf(lines, pages, () => true);
   return {
     pages: summary,
-    windowPage,
-    window: lines.slice(windowStart, windowEnd + 1).slice(0, WINDOW_LINES).map(layoutLine),
-    above: above.map(layoutLine),
+    window: unclaimed?.window ?? [],
+    above: unclaimed?.above ?? [],
+    ...(unclaimed ? { windowPage: unclaimed.windowPage } : {}),
+    ...(all ? { all } : {}),
   };
 }
 

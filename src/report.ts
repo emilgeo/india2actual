@@ -160,7 +160,9 @@ function sampleLine(line: LayoutLine, allowWords: boolean): string {
   return text.length > MAX_SAMPLE_LINE ? `${text.slice(0, MAX_SAMPLE_LINE)}...` : text;
 }
 
-function describeLayout(layout: PdfLayout): string[] {
+/** `none` when no table was read as transactions, so any dated rows are worth showing. */
+function describeLayout(layout: PdfLayout, noneRead: boolean): string[] {
+  const sampled = noneRead && layout.all;
   const out = ['PDF text, one line per page:'];
   for (const page of layout.pages.slice(0, MAX_PAGES)) {
     out.push(
@@ -180,9 +182,12 @@ function describeLayout(layout: PdfLayout): string[] {
     );
   }
 
-  if (layout.window.length) {
+  const sample = sampled ? layout.all : layout.window.length
+    ? { windowPage: layout.windowPage ?? 0, window: layout.window, above: layout.above }
+    : undefined;
+  if (sample?.window.length) {
     const heading: LayoutLine[] = [];
-    for (const line of [...layout.above].reverse()) {
+    for (const line of [...sample.above].reverse()) {
       if (line.dateLed || !line.items.every(item => isHeadingWords(item.text))) {
         break;
       }
@@ -190,10 +195,12 @@ function describeLayout(layout: PdfLayout): string[] {
     }
     out.push(
       '',
-      `Text positions on page ${layout.windowPage ?? '?'}, the first dated rows no table took ` +
+      `Text positions on page ${sample.windowPage || '?'}, ${
+        sampled ? 'the first dated rows' : 'the first dated rows no table took'
+      } ` +
         '(positions rounded to 5, text masked):',
       ...heading.map(line => `  ${sampleLine(line, true)}`),
-      ...layout.window.map(line => `  ${sampleLine(line, false)}`),
+      ...sample.window.map(line => `  ${sampleLine(line, false)}`),
     );
   }
   return out;
@@ -280,12 +287,13 @@ export function buildReport(input: ReportInput): string {
   ];
 
   if (input.layout) {
-    lines.push('', ...describeLayout(input.layout));
+    lines.push('', ...describeLayout(input.layout, sections.length === 0));
   }
 
   if (!sections.length) {
     const rows = tables.flatMap(table => table.rows);
     lines.push(
+      ...(input.layout ? [''] : []),
       `Rows extracted: ${rows.length}, cells ${cellCounts(rows)}`,
       'Header: no transaction table found',
       '',
