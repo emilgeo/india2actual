@@ -4,7 +4,7 @@ import type { Table } from './extract/types.js';
 import { interpretSections } from './interpret/sections.js';
 import { validateBalances } from './interpret/validate.js';
 import type { PdfLayout } from './extract/pdf.js';
-import { buildReport, maskText } from './report.js';
+import { PAYMENT_WORDS, buildReport, maskText } from './report.js';
 import { hsbcRows } from './testing/hsbc.js';
 
 function table(rows: string[][]): Table {
@@ -62,9 +62,31 @@ const ROWS = [
 
 describe('maskText', () => {
   it('turns letters into x and digits into 9 and keeps punctuation', () => {
-    expect(maskText('UPI-ACME 12/03/2025 swiggy@ybl')).toBe(
-      'xxx-xxxx 99/99/9999 xxxxxx@xxx',
+    expect(maskText('ACME 12/03/2025 swiggy@ybl')).toBe(
+      'xxxx 99/99/9999 xxxxxx@xxx',
     );
+  });
+
+  it('writes payment-type words out, whole words only, and masks what surrounds them', () => {
+    expect(maskText('UPI/P2A/412345678901/ACME STORE')).toBe(
+      'UPI/P2A/999999999999/xxxx xxxxx',
+    );
+    expect(maskText('UPIOUT-swiggy@ybl')).toBe('UPIOUT-xxxxxx@xxx');
+    expect(maskText('neft imps')).toBe('neft imps');
+    expect(maskText('UPIX NEFTS 4UPI')).toBe('xxxx xxxxx 9xxx');
+  });
+
+  it('keeps ambiguous words masked, since they can be part of a name', () => {
+    expect(maskText('NA SI FT PAID SENT PAY')).toBe('xx xx xx xxxx xxxx xxx');
+  });
+
+  it('pins the list of payment words, so adding one is a deliberate review', () => {
+    expect([...PAYMENT_WORDS].sort()).toEqual([
+      'ach', 'atd', 'atm', 'atw', 'awb', 'cwdr', 'ecom', 'ecs', 'fti', 'fto',
+      'ifi', 'imps', 'impstxn', 'inft', 'mmt', 'nach', 'neft', 'nwd', 'p2a',
+      'p2m', 'p2p', 'pos', 'ref', 'refno', 'rtgs', 'trf', 'txn', 'upi',
+      'upiin', 'upiout', 'vin', 'vps',
+    ]);
   });
 
   it('collapses whitespace so wrapped cells cannot reveal line breaks', () => {

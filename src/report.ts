@@ -60,7 +60,20 @@ const HEADING_WORDS = new Set(
 );
 
 /**
- * Letters become `x` and digits `9`, keeping punctuation and spacing.
+ * Words that name how a payment was made and mean nothing about a person.
+ * Whole words only. Deliberately without short or ordinary words (`si`, `ft`,
+ * `na`, `paid`, `pay`) that can be part of a name or sit beside one.
+ */
+export const PAYMENT_WORDS: ReadonlySet<string> = new Set(
+  (
+    'upi upiout upiin neft imps mmt inft rtgs pos ecom vps vin ach nach ecs ' +
+    'atm atw nwd awb cwdr p2a p2m p2p atd fto fti ifi impstxn txn trf ref refno'
+  ).split(' '),
+);
+
+/**
+ * Letters become `x` and digits `9`, keeping plain punctuation, spacing and
+ * the whole words in `PAYMENT_WORDS`.
  * Combining marks are dropped, since vowel signs in Indic scripts are not
  * letters and would otherwise pass through as written.
  */
@@ -69,11 +82,16 @@ export function maskText(text: string): string {
     .replace(/\s+/gu, ' ')
     .trim()
     .replace(/\p{M}/gu, '')
-    .replace(/\p{L}/gu, 'x')
-    .replace(/\p{N}/gu, '9')
-    // Anything else that is not plain punctuation (private-use glyphs from a
-    // font with no text mapping, enclosed letters) could be a letter in disguise.
-    .replace(/[^\sx9\-/:.,@()&_+'*#%;|\u20B9=<>!?[\]{}"~^$\\]/gu, 'x');
+    .replace(/([\p{L}\p{N}]+)|([^\p{L}\p{N}])/gu, (_, run?: string, other?: string) => {
+      if (run) {
+        return PAYMENT_WORDS.has(run.toLowerCase())
+          ? run
+          : run.replace(/\p{L}/gu, 'x').replace(/\p{N}/gu, '9');
+      }
+      // Anything that is not plain punctuation (private-use glyphs from a font
+      // with no text mapping, enclosed letters) could be a letter in disguise.
+      return /[\s\-/:.,@()&_+'*#%;|\u20B9=<>!?[\]{}"~^$\\]/u.test(other ?? '') ? (other as string) : 'x';
+    });
 }
 
 function maskCell(cell: string): string {
@@ -279,8 +297,9 @@ export function buildReport(input: ReportInput): string {
   const [first] = tables;
   const lines: string[] = [
     `india2actual ${input.version} layout report (${input.runtime})`,
-    'Letters are shown as x and digits as 9. Only column labels are ' +
-      'written out. The length of text and the size of amounts stay visible.',
+    'Letters are shown as x and digits as 9. Only column labels and payment ' +
+      'types such as UPI or NEFT are written out. The length of text and the ' +
+      'size of amounts stay visible.',
     '',
     `File: ${input.format}${first?.source.part ? `, ${first.source.part}` : ''}`,
     `Tables found: ${tables.length}, read as transactions: ${sections.length}`,
