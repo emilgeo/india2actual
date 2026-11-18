@@ -6,6 +6,23 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The layout report now says why a balance check failed (for example amounts with
+  the opposite sign, rows out of order, or a column read wrongly), using counts
+  and row positions only, never amounts or dates.
+- For a PDF, the layout report now also says how much text each page has (so a
+  scanned page is recognised), whether its dated rows were read as a table, and,
+  when no table was found or it could not be read, a masked sample of where the
+  rows sit on the page.
+- The layout report now writes out payment types such as UPI, NEFT and IMPS
+  instead of masking them, so the shape of each narration is easier to see.
+
+### Fixed
+
+- The layout report no longer writes out a name that begins with a column word
+  (such as a payee next to a Dr or Cr column) or a sheet name.
+
 ## 0.5.4 - 2026-11-17
 
 ### Added

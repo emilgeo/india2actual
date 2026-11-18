@@ -1,6 +1,8 @@
+import type { LayoutLine, PdfLayout } from './extract/pdf.js';
 import type { Table } from './extract/types.js';
 import type { Interpreted } from './interpret/rows.js';
 import { roleForHeader } from './interpret/synonyms.js';
+import { diagnoseBalance, ranges } from './report-diagnosis.js';
 import type { Validation } from './interpret/validate.js';
 
 export type ReportSection = {
@@ -22,6 +24,8 @@ export type ReportInput = {
   tables: Table[];
   /** The tables that read as transactions, joined where one continues on. */
   sections: ReportSection[];
+  /** What a PDF's text looked like, when the file was a PDF. */
+  layout?: PdfLayout;
 };
 
 /** Rows shown after the header, and skipped rows shown. */
@@ -33,6 +37,10 @@ const MAX_CELL = 24;
 
 /** Longest column label shown as written. */
 const MAX_LABEL = 40;
+
+/** Pages listed one by one, and the longest sample line. */
+const MAX_PAGES = 40;
+const MAX_SAMPLE_LINE = 160;
 
 /** A column label is only ever a few words, unlike prose that mentions one. */
 const LABEL = /^[\p{L}][\p{L} .\/&()'-]{0,29}$/u;
@@ -47,12 +55,26 @@ const HEADING_WORDS = new Set(
     'description amount debit credit balance opening closing total deposit ' +
     'deposits withdrawal withdrawals mode type cumulative cheque chq ref ' +
     'reference no number value dr cr inr rs of on for the to from period ' +
-    'account statement summary savings current'
+    'account statement summary savings current count amt bal remarks indicator ' +
+    'instrument'
   ).split(' '),
 );
 
 /**
- * Letters become `x` and digits `9`, keeping punctuation and spacing.
+ * Words that name how a payment was made and mean nothing about a person.
+ * Whole words only. Deliberately without short or ordinary words (`si`, `ft`,
+ * `na`, `paid`, `pay`) that can be part of a name or sit beside one.
+ */
+export const PAYMENT_WORDS: ReadonlySet<string> = new Set(
+  (
+    'upi upiout upiin neft imps mmt inft rtgs pos ecom vps ach nach ecs ' +
+    'atm atw nwd awb cwdr p2a p2m p2p atd fto fti ifi impstxn txn trf ref refno'
+  ).split(' '),
+);
+
+/**
+ * Letters become `x` and digits `9`, keeping plain punctuation, spacing and
+ * the whole words in `PAYMENT_WORDS`.
  * Combining marks are dropped, since vowel signs in Indic scripts are not
  * letters and would otherwise pass through as written.
  */
@@ -61,8 +83,16 @@ export function maskText(text: string): string {
     .replace(/\s+/gu, ' ')
     .trim()
     .replace(/\p{M}/gu, '')
-    .replace(/\p{L}/gu, 'x')
-    .replace(/\p{N}/gu, '9');
+    .replace(/([\p{L}\p{N}]+)|([^\p{L}\p{N}])/gu, (_, run?: string, other?: string) => {
+      if (run) {
+        return PAYMENT_WORDS.has(run.toLowerCase())
+          ? run
+          : run.replace(/\p{L}/gu, 'x').replace(/\p{N}/gu, '9');
+      }
+      // Anything that is not plain punctuation (private-use glyphs from a font
+      // with no text mapping, enclosed letters) could be a letter in disguise.
+      return /[\s\-/:.,@()&_+'*#%;|\u20B9=<>!?[\]{}"~^$\\]/u.test(other ?? '') ? (other as string) : 'x';
+    });
 }
 
 function maskCell(cell: string): string {
@@ -74,15 +104,19 @@ function clean(cell: string): string {
   return cell.replace(/\s+/gu, ' ').trim();
 }
 
-/** Is this cell a column label, made only of heading words or a known role? */
+/**
+ * Is this cell a column label, made only of heading words or a known role? Only
+ * for the row already identified as the header: the role patterns are prefixes
+ * and would also pass a name that begins with a column word.
+ */
 function isLabel(cell: string): boolean {
   const text = clean(cell);
-  if (!text || text.length > MAX_LABEL || /\d/u.test(text)) {
+  if (!text || text.length > MAX_LABEL || /\p{N}/u.test(text) || !LABEL.test(text)) {
     return false;
   }
   const words = text.toLowerCase().match(/\p{L}+/gu) ?? [];
   const known = words.length > 0 && words.every(word => HEADING_WORDS.has(word));
-  return known || (LABEL.test(text) && roleForHeader(text) !== null);
+  return known || roleForHeader(text) !== null;
 }
 
 /** A label is shown as written, anything else is masked. */
@@ -91,12 +125,20 @@ function describeCell(cell: string): string {
 }
 
 /**
- * A single cell that looks like a label may be a payee ("Dr ..." reads as a
- * debit column), so only a row with two or more is treated as a header.
+ * Any row other than the header: a cell is written out only when it is made of
+ * heading words from the closed list. A single such cell may be part of a
+ * payee ("Dr" beside a name), so only a row with two or more shows any.
  */
 function maskRow(row: string[]): string {
-  const header = row.filter(isLabel).length >= 2;
-  return row.map(header ? describeCell : maskCell).join(' | ');
+  const header = row.filter(isHeadingWords).length >= 2;
+  return row
+    .map(cell => (header && isHeadingWords(cell) ? clean(cell) : maskCell(cell)))
+    .join(' | ');
+}
+
+/** A PDF's page count is shown; a sheet name can be anything, so it is masked. */
+function partOf(part: string): string {
+  return /^\d+ page\(s\)$/.test(part) ? part : maskText(part);
 }
 
 function cellCounts(rows: string[][]): string {
@@ -124,6 +166,75 @@ function countBy<T>(items: T[], key: (item: T) => string): string {
       .map(([name, count]) => `${name}=${count}`)
       .join(', ') || 'none'
   );
+}
+
+/** Only words from the heading list, never a prefix match, since a name can begin with a column word. */
+function isHeadingWords(text: string): boolean {
+  const clean = text.replace(/\s+/gu, ' ').trim();
+  if (!clean || clean.length > MAX_LABEL || /\p{N}/u.test(clean) || !LABEL.test(clean)) {
+    return false;
+  }
+  const words = clean.toLowerCase().match(/\p{L}+/gu) ?? [];
+  return words.length > 0 && words.every(word => HEADING_WORDS.has(word));
+}
+
+/** Words are written out only in a heading line, never in the rows of the sample. */
+function sampleLine(line: LayoutLine, allowWords: boolean): string {
+  const text = line.items
+    .map(item => {
+      const shown = allowWords && isHeadingWords(item.text)
+        ? item.text.replace(/\s+/gu, ' ').trim()
+        : maskCell(item.text);
+      return `x=${Math.round(item.x / 5) * 5} ${shown}`;
+    })
+    .join(' | ');
+  return text.length > MAX_SAMPLE_LINE ? `${text.slice(0, MAX_SAMPLE_LINE)}...` : text;
+}
+
+/** `none` when no table was read as transactions, so any dated rows are worth showing. */
+function describeLayout(layout: PdfLayout, noneRead: boolean): string[] {
+  const sampled = noneRead && layout.all;
+  const out = ['PDF text, one line per page:'];
+  for (const page of layout.pages.slice(0, MAX_PAGES)) {
+    out.push(
+      `  page ${page.page}: ${page.items} text items, ${page.lines} lines, ` +
+        `${page.dateLines} date-led, ${page.amountLines} with two or more amounts, ` +
+        `in a table: ${page.inTable ? 'yes' : 'no'}`,
+    );
+  }
+  if (layout.pages.length > MAX_PAGES) {
+    out.push(`  and ${layout.pages.length - MAX_PAGES} more pages`);
+  }
+  const empty = layout.pages.filter(page => page.items === 0).map(page => page.page);
+  if (empty.length) {
+    out.push(
+      `Pages without a text layer: ${ranges(empty)} ` +
+        '(probably scanned images, which this tool cannot read)',
+    );
+  }
+
+  const sample = sampled ? layout.all : layout.window.length
+    ? { windowPage: layout.windowPage ?? 0, window: layout.window, above: layout.above }
+    : undefined;
+  if (sample?.window.length) {
+    const heading: LayoutLine[] = [];
+    for (const line of [...sample.above].reverse()) {
+      if (line.dateLed || !line.items.every(item => isHeadingWords(item.text))) {
+        break;
+      }
+      heading.unshift(line);
+    }
+    out.push(
+      '',
+      `Text positions on page ${sample.windowPage || '?'}, ${
+        sampled ? 'the first dated rows' : 'the first dated rows no table took'
+      } ` +
+        '(positions rounded to 5, text masked):',
+      ...heading.map(line => `  ${sampleLine(line, true)}`),
+      ...sample.window.map(line => `  ${sampleLine(line, false)}`),
+    );
+  }
+  return out;
 }
 
 function describeSection(section: ReportSection): string[] {
@@ -162,12 +273,21 @@ function describeSection(section: ReportSection): string[] {
     );
   }
 
+  const balance = checks.find(check => check.name === 'Balance check');
+  if (!result.card && balance?.validation.status === 'failed') {
+    lines.push('', ...diagnoseBalance(transactions, skipped));
+  }
+
   lines.push(
     '',
     'Rows around the header, masked:',
     ...table.rows
       .slice(Math.max(0, header.index - 1), header.index + 1 + SAMPLE_ROWS)
-      .map(row => `  ${maskRow(row)}`),
+      .map((row, offset) =>
+        Math.max(0, header.index - 1) + offset === header.index
+          ? `  ${row.map(describeCell).join(' | ')}`
+          : `  ${maskRow(row)}`,
+      ),
   );
 
   if (skipped.length) {
@@ -194,16 +314,22 @@ export function buildReport(input: ReportInput): string {
   const [first] = tables;
   const lines: string[] = [
     `india2actual ${input.version} layout report (${input.runtime})`,
-    'Letters are shown as x and digits as 9. Only column labels are ' +
-      'written out. The length of text and the size of amounts stay visible.',
+    'Letters are shown as x and digits as 9. Only column labels and payment ' +
+      'types such as UPI or NEFT are written out. The length of text and the ' +
+      'size of amounts stay visible.',
     '',
-    `File: ${input.format}${first?.source.part ? `, ${first.source.part}` : ''}`,
+    `File: ${input.format}${first?.source.part ? `, ${partOf(first.source.part)}` : ''}`,
     `Tables found: ${tables.length}, read as transactions: ${sections.length}`,
   ];
+
+  if (input.layout) {
+    lines.push('', ...describeLayout(input.layout, sections.length === 0));
+  }
 
   if (!sections.length) {
     const rows = tables.flatMap(table => table.rows);
     lines.push(
+      ...(input.layout ? [''] : []),
       `Rows extracted: ${rows.length}, cells ${cellCounts(rows)}`,
       'Header: no transaction table found',
       '',

@@ -317,6 +317,7 @@ export function App() {
       runtime: 'browser',
       format: entry.file.format ?? 'unknown',
       tables: entry.file.tables,
+      ...(entry.file.layout ? { layout: entry.file.layout } : {}),
       sections: entry.sections.map((section, index) => ({
         number: index + 1,
         ...(section.account ? { account: section.account } : {}),

@@ -398,9 +398,18 @@ This tool needs help from you to test statements from unverified banks. The tool
 4. Fill in the [bank report form](https://github.com/emilgeo/india2actual/issues/new?template=bank-report.yml).
 
 The report shows how the file was read: the columns it found, row counts and
-the balance check result. Letters are printed as `x` and digits as `9`, so it
-carries no names, account numbers or amounts. Read it before you post it, and
-please never attach or paste the statement itself.
+the balance check result. If the balance check failed, it says why in counts
+and row positions only (for example amounts with the opposite sign, or rows out
+of order). For a PDF it also says how much text each page has, so a scanned page
+is recognised, and when no table was found it shows a short masked sample of
+where the rows sit on the page.
+
+Letters are printed as `x` and digits as `9`. Only common column words such as
+Date or Balance, and payment types such as UPI or NEFT, are written out. The report is built to hold no names, account numbers
+or amounts, but the length of each amount stays visible, so it shows roughly how
+large they are. Read it before you post it. An issue is public, and editing it
+later does not remove the first version. Please never attach or paste the
+statement itself, not even privately.
 
 What is most wanted (see [Supported banks](#supported-banks) for formats):
 
