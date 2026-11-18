@@ -106,7 +106,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build the extensions
-        # Fails when a file in either build reaches Firefox's 5 MB limit.
+        # Fails when a file in either build reaches the add-on validator's 5 MiB limit.
         run: |
           node scripts/build-extension.mjs
           node scripts/build-extension.mjs --firefox

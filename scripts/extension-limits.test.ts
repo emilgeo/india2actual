@@ -19,7 +19,7 @@ describe('oversizedFiles', () => {
     ]);
   });
 
-  it('keeps the limit below the 5 MB Firefox stops reading at, in either unit', () => {
-    expect(MAX_FILE_BYTES).toBeLessThanOrEqual(5_000_000);
+  it("is the add-on validator's limit of 5 MiB", () => {
+    expect(MAX_FILE_BYTES).toBe(5_242_880);
   });
 });
