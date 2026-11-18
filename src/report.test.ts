@@ -77,7 +77,7 @@ describe('maskText', () => {
   });
 
   it('keeps ambiguous words masked, since they can be part of a name', () => {
-    expect(maskText('NA SI FT PAID SENT PAY')).toBe('xx xx xx xxxx xxxx xxx');
+    expect(maskText('NA SI FT PAID SENT PAY VIN')).toBe('xx xx xx xxxx xxxx xxx xxx');
   });
 
   it('pins the list of payment words, so adding one is a deliberate review', () => {
@@ -85,7 +85,7 @@ describe('maskText', () => {
       'ach', 'atd', 'atm', 'atw', 'awb', 'cwdr', 'ecom', 'ecs', 'fti', 'fto',
       'ifi', 'imps', 'impstxn', 'inft', 'mmt', 'nach', 'neft', 'nwd', 'p2a',
       'p2m', 'p2p', 'pos', 'ref', 'refno', 'rtgs', 'trf', 'txn', 'upi',
-      'upiin', 'upiout', 'vin', 'vps',
+      'upiin', 'upiout', 'vps',
     ]);
   });
 
@@ -233,6 +233,63 @@ describe('buildReport', () => {
     expect(text).toContain('xxxx x x xxxxx');
     expect(text).not.toContain('OTHER');
     expect(text).not.toContain('0000000000000000');
+  });
+});
+
+describe('text that only looks like a column label', () => {
+  const withIndicator = [
+    ['Date', 'Narration', 'Amount', 'Dr/Cr', 'Balance'],
+    ['12/03/2025', 'DRAVID KUMAR', '725.00', 'Dr', '9,275.00'],
+    ['13/03/2025', 'CREIGHTON SMITH', '430.00', 'Cr', '9,705.00'],
+    ['', 'DRAKE CROWE', '', 'Dr', ''],
+  ];
+
+  it('masks names that begin with a column word, on dated rows and skipped rows', () => {
+    const text = report(table(withIndicator));
+    for (const secret of ['DRAVID', 'KUMAR', 'CREIGHTON', 'SMITH', 'DRAKE', 'CROWE']) {
+      expect(text).not.toContain(secret);
+    }
+    expect(text).toContain('Header cells: Date | Narration | Amount | Dr/Cr | Balance');
+  });
+
+  it('masks a name in the first rows when no table was found', () => {
+    const text = buildReport({
+      version: '0.0.0',
+      runtime: 'browser',
+      format: 'PDF',
+      tables: [table([['Dr', 'DRAVID KUMAR']])],
+      sections: [],
+    });
+    expect(text).not.toContain('DRAVID');
+  });
+
+  it('does not write a heading out when a digit in another script follows it', () => {
+    const header = ['Date', 'Narration', 'Withdrawal Amt.', 'Deposit Amt.', 'Closing Balance \u0667\u0662\u0665'];
+    const text = report(table([header, ROWS[2]!]));
+    expect(text).not.toContain('\u0667');
+  });
+
+  it('masks a sheet name, which can be anything', () => {
+    const text = buildReport({
+      version: '0.0.0',
+      runtime: 'browser',
+      format: 'Excel workbook',
+      tables: [{ rows: [], source: { path: 'x.xlsx', format: 'xlsx', part: 'JOHN DOE 0000000000000000' } }],
+      sections: [],
+    });
+    expect(text).not.toContain('JOHN');
+    expect(text).not.toContain('0000000000000000');
+  });
+
+  it('still shows the page count of a PDF', () => {
+    const text = buildReport({
+      version: '0.0.0',
+      runtime: 'browser',
+      format: 'PDF',
+      tables: [{ rows: [], source: { path: 'x.pdf', format: 'pdf', part: '8 page(s)' } }],
+      sections: [],
+    });
+    expect(text).toContain('File: PDF, 8 page(s)');
   });
 });
 

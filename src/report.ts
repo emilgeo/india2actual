@@ -55,7 +55,8 @@ const HEADING_WORDS = new Set(
     'description amount debit credit balance opening closing total deposit ' +
     'deposits withdrawal withdrawals mode type cumulative cheque chq ref ' +
     'reference no number value dr cr inr rs of on for the to from period ' +
-    'account statement summary savings current'
+    'account statement summary savings current count amt bal remarks indicator ' +
+    'instrument'
   ).split(' '),
 );
 
@@ -66,7 +67,7 @@ const HEADING_WORDS = new Set(
  */
 export const PAYMENT_WORDS: ReadonlySet<string> = new Set(
   (
-    'upi upiout upiin neft imps mmt inft rtgs pos ecom vps vin ach nach ecs ' +
+    'upi upiout upiin neft imps mmt inft rtgs pos ecom vps ach nach ecs ' +
     'atm atw nwd awb cwdr p2a p2m p2p atd fto fti ifi impstxn txn trf ref refno'
   ).split(' '),
 );
@@ -103,15 +104,19 @@ function clean(cell: string): string {
   return cell.replace(/\s+/gu, ' ').trim();
 }
 
-/** Is this cell a column label, made only of heading words or a known role? */
+/**
+ * Is this cell a column label, made only of heading words or a known role? Only
+ * for the row already identified as the header: the role patterns are prefixes
+ * and would also pass a name that begins with a column word.
+ */
 function isLabel(cell: string): boolean {
   const text = clean(cell);
-  if (!text || text.length > MAX_LABEL || /\d/u.test(text)) {
+  if (!text || text.length > MAX_LABEL || /\p{N}/u.test(text) || !LABEL.test(text)) {
     return false;
   }
   const words = text.toLowerCase().match(/\p{L}+/gu) ?? [];
   const known = words.length > 0 && words.every(word => HEADING_WORDS.has(word));
-  return known || (LABEL.test(text) && roleForHeader(text) !== null);
+  return known || roleForHeader(text) !== null;
 }
 
 /** A label is shown as written, anything else is masked. */
@@ -120,12 +125,20 @@ function describeCell(cell: string): string {
 }
 
 /**
- * A single cell that looks like a label may be a payee ("Dr ..." reads as a
- * debit column), so only a row with two or more is treated as a header.
+ * Any row other than the header: a cell is written out only when it is made of
+ * heading words from the closed list. A single such cell may be part of a
+ * payee ("Dr" beside a name), so only a row with two or more shows any.
  */
 function maskRow(row: string[]): string {
-  const header = row.filter(isLabel).length >= 2;
-  return row.map(header ? describeCell : maskCell).join(' | ');
+  const header = row.filter(isHeadingWords).length >= 2;
+  return row
+    .map(cell => (header && isHeadingWords(cell) ? clean(cell) : maskCell(cell)))
+    .join(' | ');
+}
+
+/** A PDF's page count is shown; a sheet name can be anything, so it is masked. */
+function partOf(part: string): string {
+  return /^\d+ page\(s\)$/.test(part) ? part : maskText(part);
 }
 
 function cellCounts(rows: string[][]): string {
@@ -270,7 +283,11 @@ function describeSection(section: ReportSection): string[] {
     'Rows around the header, masked:',
     ...table.rows
       .slice(Math.max(0, header.index - 1), header.index + 1 + SAMPLE_ROWS)
-      .map(row => `  ${maskRow(row)}`),
+      .map((row, offset) =>
+        Math.max(0, header.index - 1) + offset === header.index
+          ? `  ${row.map(describeCell).join(' | ')}`
+          : `  ${maskRow(row)}`,
+      ),
   );
 
   if (skipped.length) {
@@ -301,7 +318,7 @@ export function buildReport(input: ReportInput): string {
       'types such as UPI or NEFT are written out. The length of text and the ' +
       'size of amounts stay visible.',
     '',
-    `File: ${input.format}${first?.source.part ? `, ${first.source.part}` : ''}`,
+    `File: ${input.format}${first?.source.part ? `, ${partOf(first.source.part)}` : ''}`,
     `Tables found: ${tables.length}, read as transactions: ${sections.length}`,
   ];
 

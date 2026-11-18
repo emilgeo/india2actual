@@ -13,7 +13,10 @@ All notable changes to this project are recorded here. The format follows
   and row positions only, never amounts or dates.
 - For a PDF, the layout report now also says how much text each page has (so a
   scanned page is recognised), whether its dated rows were read as a table, and,
-  when no table was found, a masked sample of where the rows sit on the page.
+  when no table was found or it could not be read, a masked sample of where the
+  rows sit on the page.
+- The layout report no longer writes out a name that begins with a column word
+  (such as a payee next to a Dr or Cr column) or a sheet name.
 - The layout report now writes out payment types such as UPI, NEFT and IMPS
   instead of masking them, so the shape of each narration is easier to see.
 
