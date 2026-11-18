@@ -71,6 +71,11 @@ describe('maskText', () => {
     expect(maskText('A  B\nC')).toBe('x x x');
   });
 
+  it('masks enclosed letters and private-use characters, which are not letters', () => {
+    expect(maskText('\u24BF\u24DE\u24D7\u24DD')).toBe('xxxx');
+    expect(maskText('A\uE001B')).toBe('xxx');
+  });
+
   it('masks letters, vowel signs and digits outside ASCII', () => {
     expect(maskText('मुंबई ₹५०')).toBe('xxx ₹99');
   });
@@ -255,12 +260,12 @@ describe('PDF layout in the report', () => {
       ...base,
       windowPage: 2,
       above: [
-        plain([36, 'Krishnan Iyer'], [200, 'Flat 4, Example Road']),
+        plain([36, 'JOHN DOE'], [200, 'Flat 4, Example Road']),
         plain([20, 'Date'], [80, 'Narration'], [220, 'Withdrawal']),
       ],
       window: [
         dated([21, '12/03/2025'], [82, 'ACME STORE PUNE IN'], [221, '725.00']),
-        plain([82, 'Drishti Creations'], [221, 'Dr']),
+        plain([82, 'Drake Crowe'], [221, 'Dr']),
       ],
     });
 
@@ -269,7 +274,7 @@ describe('PDF layout in the report', () => {
     expect(text).toContain('x=80 xxxx xxxxx xxxx xx');
     // Heading words directly above are written out; the name line above them is not reached.
     expect(text).toContain('x=20 Date | x=80 Narration | x=220 Withdrawal');
-    for (const secret of ['Krishnan', 'Iyer', 'Example', 'ACME', 'Drishti', 'Creations', '725', '12/03/2025']) {
+    for (const secret of ['JOHN', 'DOE', 'Example', 'ACME', 'Drake', 'Crowe', '725', '12/03/2025']) {
       expect(text).not.toContain(secret);
     }
   });
@@ -280,12 +285,28 @@ describe('PDF layout in the report', () => {
       windowPage: 1,
       above: [
         plain([20, 'Date'], [80, 'Narration']),
-        plain([36, 'Krishnan Iyer'], [200, 'Flat 4']),
+        plain([36, 'JOHN DOE'], [200, 'Flat 4']),
       ],
       window: [dated([20, '12/03/2025'], [220, '725.00'])],
     });
     expect(text).not.toContain('Narration');
-    expect(text).not.toContain('Krishnan');
+    expect(text).not.toContain('JOHN');
+  });
+
+  it('masks heading words on the rows of the sample and any digit script above it', () => {
+    const text = pdfReport({
+      ...base,
+      windowPage: 1,
+      above: [plain([20, 'Date'], [80, 'Balance \u0967\u0968,\u0969\u096A\u096B.\u0966\u0966'])],
+      window: [
+        dated([20, '12/03/2025'], [220, '725.00']),
+        plain([80, 'Dr'], [120, 'Savings'], [160, 'to the account']),
+      ],
+    });
+    expect(text).not.toContain('\u0967');
+    expect(text).not.toContain('Savings');
+    expect(text).not.toMatch(/x=80 Dr/);
+    expect(text).toContain('x=80 xx | x=120 xxxxxxx | x=160 xx xxx xxxxxxx');
   });
 
   it('writes a window word out only on a line that is not date-led', () => {

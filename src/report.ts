@@ -70,7 +70,10 @@ export function maskText(text: string): string {
     .trim()
     .replace(/\p{M}/gu, '')
     .replace(/\p{L}/gu, 'x')
-    .replace(/\p{N}/gu, '9');
+    .replace(/\p{N}/gu, '9')
+    // Anything else that is not plain punctuation (private-use glyphs from a
+    // font with no text mapping, enclosed letters) could be a letter in disguise.
+    .replace(/[^\sx9\-/:.,@()&_+'*#%;|\u20B9=<>!?[\]{}"~^$\\]/gu, 'x');
 }
 
 function maskCell(cell: string): string {
@@ -137,17 +140,18 @@ function countBy<T>(items: T[], key: (item: T) => string): string {
 /** Only words from the heading list, never a prefix match, since a name can begin with a column word. */
 function isHeadingWords(text: string): boolean {
   const clean = text.replace(/\s+/gu, ' ').trim();
-  if (!clean || clean.length > MAX_LABEL || /\d/u.test(clean)) {
+  if (!clean || clean.length > MAX_LABEL || /\p{N}/u.test(clean) || !LABEL.test(clean)) {
     return false;
   }
   const words = clean.toLowerCase().match(/\p{L}+/gu) ?? [];
   return words.length > 0 && words.every(word => HEADING_WORDS.has(word));
 }
 
-function sampleLine(line: LayoutLine): string {
+/** Words are written out only in a heading line, never in the rows of the sample. */
+function sampleLine(line: LayoutLine, allowWords: boolean): string {
   const text = line.items
     .map(item => {
-      const shown = !line.dateLed && isHeadingWords(item.text)
+      const shown = allowWords && isHeadingWords(item.text)
         ? item.text.replace(/\s+/gu, ' ').trim()
         : maskCell(item.text);
       return `x=${Math.round(item.x / 5) * 5} ${shown}`;
@@ -188,7 +192,8 @@ function describeLayout(layout: PdfLayout): string[] {
       '',
       `Text positions on page ${layout.windowPage ?? '?'}, the first dated rows no table took ` +
         '(positions rounded to 5, text masked):',
-      ...[...heading, ...layout.window].map(line => `  ${sampleLine(line)}`),
+      ...heading.map(line => `  ${sampleLine(line, true)}`),
+      ...layout.window.map(line => `  ${sampleLine(line, false)}`),
     );
   }
   return out;
