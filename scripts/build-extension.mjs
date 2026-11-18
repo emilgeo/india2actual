@@ -6,6 +6,7 @@
 import { mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { MAX_FILE_BYTES, oversizedFiles } from './extension-limits.mjs';
 import { manifestFor } from './extension-manifest.mjs';
 import { zip } from './pack.mjs';
 import { buildCss, buildWorker, bundleAppSplit, packageVersion, root } from './web-shared.mjs';
@@ -23,6 +24,15 @@ const files = [
   ...(await bundleAppSplit()),
   ...[16, 32, 48, 128].map(size => ({ name: `icons/${size}.png`, data: readFileSync(resolve(root, `extension/icons/${size}.png`)) })),
 ];
+
+const tooBig = oversizedFiles(files);
+if (tooBig.length > 0) {
+  for (const { name, size } of tooBig) {
+    console.error(`${name} is ${size} bytes, at or over the ${MAX_FILE_BYTES} limit.`);
+  }
+  console.error('Firefox stops reading a file over 5 MB. Split the bundle (see bundleAppSplit).');
+  process.exit(1);
+}
 
 rmSync(outDir, { recursive: true, force: true });
 for (const { name, data } of files) {

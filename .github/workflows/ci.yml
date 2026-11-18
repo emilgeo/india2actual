@@ -105,6 +105,14 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Build the extensions
+        # Fails when a file in either build reaches Firefox's 5 MB limit.
+        run: |
+          node scripts/build-extension.mjs
+          node scripts/build-extension.mjs --firefox
+      - name: Lint the Firefox extension
+        # Errors fail the job; the eval and API warnings come from bundled libraries.
+        run: npx --yes web-ext@10.8.0 lint --source-dir dist-extension-firefox --ignore-files india2actual-extension.zip
       - name: Install a browser
         run: npx playwright install --with-deps chromium
       - name: Test the Chrome extension
