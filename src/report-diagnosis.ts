@@ -13,8 +13,6 @@ const AMOUNT_CELL = /^\(?-?\d[\d,]*\.\d{2}\)?(\s?(cr|dr))?$/i;
 type Pair = {
   /** Index in the parsed list of the row the check blames. */
   blamed: number;
-  /** Index of the other row of the pair. */
-  other: number;
   /** Balance change between the two rows, in the direction of time. */
   delta: number;
   /** What the blamed row's amount would have to be. */
@@ -53,7 +51,6 @@ function pairsFor(
     const after = balanceOf(rows[current] as StatementTransaction);
     pairs.push({
       blamed,
-      other: asc ? previous : current,
       delta: asc ? after - before : before - after,
       amount: amountOf(rows[blamed] as StatementTransaction),
       between,
@@ -108,14 +105,9 @@ function relationOf(
   const neighbours = [rows[pair.blamed - 1], rows[pair.blamed + 1]].flatMap(row =>
     row ? [row.amount] : [],
   );
+  // The looser forms (amount minus a neighbour) also fit a misread balance column.
   const swapped = neighbours.some(
-    n =>
-      close(delta, n) ||
-      close(delta, -n) ||
-      close(delta, amount + n) ||
-      close(delta, amount - n) ||
-      close(delta, n - amount) ||
-      close(delta, -amount - n),
+    n => close(delta, n) || close(delta, -n) || close(delta, amount + n) || close(delta, -amount - n),
   );
   return swapped ? 'swap' : 'other';
 }
@@ -180,7 +172,9 @@ export function diagnoseBalance(
   }
 
   const sameDate = failing.filter(
-    pair => rows[pair.blamed]?.date === rows[pair.other]?.date,
+    pair =>
+      rows[pair.blamed]?.date === rows[pair.blamed - 1]?.date ||
+      rows[pair.blamed]?.date === rows[pair.blamed + 1]?.date,
   ).length;
 
   const first = balanced[0] as StatementTransaction;

@@ -51,8 +51,25 @@ describe('diagnoseBalance', () => {
     const rows = clean();
     [rows[3], rows[4]] = [rows[4]!, rows[3]!];
     const out = text(diagnoseBalance(rows, []));
-    expect(out).toMatch(/swapped-pair pattern=[1-9]/);
+    expect(out).toMatch(/swapped-pair pattern=2/);
     expect(out).toMatch(/equals the sum of the parsed amounts: yes/);
+  });
+
+  it('does not call a misread balance column a swapped pair', () => {
+    const rows = clean().map(row => ({ ...row, amount: row.balance as number }));
+    const out = text(diagnoseBalance(rows, []));
+    expect(out).not.toMatch(/swapped-pair pattern=[1-9]/);
+    expect(out).toContain('Rows whose amount equals the balance: 8 of 8');
+  });
+
+  it('compares a failing row with the row next to it in the list, not only with the other balanced row', () => {
+    const rows = ledger(1000, [
+      { amount: -10, date: '2025-03-01' },
+      { amount: -20, date: '2025-03-02', balance: false },
+      { amount: -30, date: '2025-03-02' },
+    ]);
+    rows[2] = { ...rows[2]!, amount: 30 };
+    expect(text(diagnoseBalance(rows, []))).toMatch(/same date as the neighbouring row: 1 of 1/);
   });
 
   it('recognises rows without a balance between two balanced rows', () => {
