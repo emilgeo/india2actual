@@ -288,7 +288,7 @@ async function run(args: string[]): Promise<number> {
   // history.
   const pdfPassword = setting('STATEMENT_PASSWORD');
 
-  const { tables, format } = await extractTables(options.input, {
+  const { tables, format, layout } = await extractTables(options.input, {
     ...(options.delimiter ? { delimiter: options.delimiter } : {}),
     ...(pdfPassword ? { password: pdfPassword } : {}),
   });
@@ -307,6 +307,7 @@ async function run(args: string[]): Promise<number> {
         runtime: `Node ${versions.node}`,
         format: describeFormat(format),
         tables,
+        ...(layout ? { layout } : {}),
         sections: interpretSections(tables, interpretOptions).map(
           (section, index) => ({
             number: index + 1,

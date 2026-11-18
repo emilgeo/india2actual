@@ -75,7 +75,7 @@ const score = (
   );
 
 /** Position ranges like `3-4, 7`, shortened after a fixed number. */
-function ranges(positions: number[]): string {
+export function ranges(positions: number[]): string {
   const sorted = [...new Set(positions)].sort((a, b) => a - b);
   const spans: string[] = [];
   for (let i = 0; i < sorted.length; ) {

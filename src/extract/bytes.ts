@@ -1,4 +1,5 @@
-import { extractPdf } from './pdf.js';
+import { extractPdfWithLayout } from './pdf.js';
+import type { PdfLayout } from './pdf.js';
 import { describeFormat, detectFormat } from './sniff.js';
 import type { DetectedFormat } from './sniff.js';
 import { tableFromCsv } from './csv.js';
@@ -19,6 +20,8 @@ export type Extraction = {
   tables: Table[];
   /** What the file turned out to be, which is often not what it is named. */
   format: DetectedFormat;
+  /** What a PDF's text looked like. Only for reports; an import ignores it. */
+  layout?: PdfLayout;
 };
 
 const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -42,15 +45,14 @@ export async function extractTablesFromBytes(
       return { tables: [tableFromHtml(text(bytes), name)], format };
     case 'spreadsheetml':
       return { tables: [tableFromSpreadsheetMl(text(bytes), name)], format };
-    case 'pdf':
-      return {
-        tables: await extractPdf(
-          bytes,
-          name,
-          options.password ? { password: options.password } : {},
-        ),
-        format,
-      };
+    case 'pdf': {
+      const { tables, layout } = await extractPdfWithLayout(
+        bytes,
+        name,
+        options.password ? { password: options.password } : {},
+      );
+      return { tables, format, ...(layout ? { layout } : {}) };
+    }
     case 'biff':
       // Legacy BIFF has no maintained, permissively licensed reader for Node,
       // and re-saving is a one-step fix, so this stays an explicit refusal

@@ -1,6 +1,7 @@
 import { extractTablesFromBytes } from '../../src/extract/bytes.js';
 import { describeFormat } from '../../src/extract/sniff.js';
 import { isPasswordError } from '../../src/extract/pdf.js';
+import type { PdfLayout } from '../../src/extract/pdf.js';
 import type { Table } from '../../src/extract/types.js';
 import { interpretSections } from '../../src/interpret/sections.js';
 import type { Section } from '../../src/interpret/sections.js';
@@ -19,6 +20,8 @@ export type LoadedFile = {
   /** What the file turned out to be, in words. */
   format?: string;
   tables: Table[];
+  /** What a PDF's text looked like, for the report. */
+  layout?: PdfLayout;
 };
 
 /** Read a file's tables. A PDF that needs a password says so, rather than failing. */
@@ -29,7 +32,7 @@ export async function loadFile(
   password?: string,
 ): Promise<LoadedFile> {
   try {
-    const { tables, format } = await extractTablesFromBytes(bytes, name, {
+    const { tables, format, layout } = await extractTablesFromBytes(bytes, name, {
       ...(password ? { password } : {}),
     });
     return {
@@ -39,6 +42,7 @@ export async function loadFile(
       status: 'ready',
       format: describeFormat(format),
       tables,
+      ...(layout ? { layout } : {}),
     };
   } catch (error) {
     if (isPasswordError(error)) {

@@ -11,6 +11,9 @@ All notable changes to this project are recorded here. The format follows
 - The layout report now says why a balance check failed (for example amounts with
   the opposite sign, rows out of order, or a column read wrongly), using counts
   and row positions only, never amounts or dates.
+- For a PDF, the layout report now also says how much text each page has (so a
+  scanned page is recognised), whether its dated rows were read as a table, and,
+  when no table was found, a masked sample of where the rows sit on the page.
 
 ## 0.5.4 - 2026-11-17
 

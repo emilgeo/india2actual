@@ -1,7 +1,8 @@
+import type { LayoutLine, PdfLayout } from './extract/pdf.js';
 import type { Table } from './extract/types.js';
 import type { Interpreted } from './interpret/rows.js';
 import { roleForHeader } from './interpret/synonyms.js';
-import { diagnoseBalance } from './report-diagnosis.js';
+import { diagnoseBalance, ranges } from './report-diagnosis.js';
 import type { Validation } from './interpret/validate.js';
 
 export type ReportSection = {
@@ -23,6 +24,8 @@ export type ReportInput = {
   tables: Table[];
   /** The tables that read as transactions, joined where one continues on. */
   sections: ReportSection[];
+  /** What a PDF's text looked like, when the file was a PDF. */
+  layout?: PdfLayout;
 };
 
 /** Rows shown after the header, and skipped rows shown. */
@@ -34,6 +37,10 @@ const MAX_CELL = 24;
 
 /** Longest column label shown as written. */
 const MAX_LABEL = 40;
+
+/** Pages listed one by one, and the longest sample line. */
+const MAX_PAGES = 40;
+const MAX_SAMPLE_LINE = 160;
 
 /** A column label is only ever a few words, unlike prose that mentions one. */
 const LABEL = /^[\p{L}][\p{L} .\/&()'-]{0,29}$/u;
@@ -127,6 +134,66 @@ function countBy<T>(items: T[], key: (item: T) => string): string {
   );
 }
 
+/** Only words from the heading list, never a prefix match, since a name can begin with a column word. */
+function isHeadingWords(text: string): boolean {
+  const clean = text.replace(/\s+/gu, ' ').trim();
+  if (!clean || clean.length > MAX_LABEL || /\d/u.test(clean)) {
+    return false;
+  }
+  const words = clean.toLowerCase().match(/\p{L}+/gu) ?? [];
+  return words.length > 0 && words.every(word => HEADING_WORDS.has(word));
+}
+
+function sampleLine(line: LayoutLine): string {
+  const text = line.items
+    .map(item => {
+      const shown = !line.dateLed && isHeadingWords(item.text)
+        ? item.text.replace(/\s+/gu, ' ').trim()
+        : maskCell(item.text);
+      return `x=${Math.round(item.x / 5) * 5} ${shown}`;
+    })
+    .join(' | ');
+  return text.length > MAX_SAMPLE_LINE ? `${text.slice(0, MAX_SAMPLE_LINE)}...` : text;
+}
+
+function describeLayout(layout: PdfLayout): string[] {
+  const out = ['PDF text, one line per page:'];
+  for (const page of layout.pages.slice(0, MAX_PAGES)) {
+    out.push(
+      `  page ${page.page}: ${page.items} text items, ${page.lines} lines, ` +
+        `${page.dateLines} date-led, ${page.amountLines} with two or more amounts, ` +
+        `in a table: ${page.inTable ? 'yes' : 'no'}`,
+    );
+  }
+  if (layout.pages.length > MAX_PAGES) {
+    out.push(`  and ${layout.pages.length - MAX_PAGES} more pages`);
+  }
+  const empty = layout.pages.filter(page => page.items === 0).map(page => page.page);
+  if (empty.length) {
+    out.push(
+      `Pages without a text layer: ${ranges(empty)} ` +
+        '(probably scanned images, which this tool cannot read)',
+    );
+  }
+
+  if (layout.window.length) {
+    const heading: LayoutLine[] = [];
+    for (const line of [...layout.above].reverse()) {
+      if (line.dateLed || !line.items.every(item => isHeadingWords(item.text))) {
+        break;
+      }
+      heading.unshift(line);
+    }
+    out.push(
+      '',
+      `Text positions on page ${layout.windowPage ?? '?'}, the first dated rows no table took ` +
+        '(positions rounded to 5, text masked):',
+      ...[...heading, ...layout.window].map(line => `  ${sampleLine(line)}`),
+    );
+  }
+  return out;
+}
+
 function describeSection(section: ReportSection): string[] {
   const { table, result, checks } = section;
   const { header, transactions, skipped } = result;
@@ -206,6 +273,10 @@ export function buildReport(input: ReportInput): string {
     `File: ${input.format}${first?.source.part ? `, ${first.source.part}` : ''}`,
     `Tables found: ${tables.length}, read as transactions: ${sections.length}`,
   ];
+
+  if (input.layout) {
+    lines.push('', ...describeLayout(input.layout));
+  }
 
   if (!sections.length) {
     const rows = tables.flatMap(table => table.rows);

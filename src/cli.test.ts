@@ -124,6 +124,18 @@ describe('the command line', () => {
   });
 });
 
+describe('the layout report for a PDF', () => {
+  it('describes the PDF text without printing any of it', () => {
+    const { code, out } = run([pdf, '--debug-layout']);
+
+    expect(code).toBe(0);
+    expect(out).toContain('PDF text, one line per page:');
+    expect(out).toMatch(/page 1: \d+ text items/);
+    expect(out).not.toContain('ACME');
+    expect(out).not.toContain('JOHN');
+  });
+});
+
 describe('HSBC transaction history', () => {
   it('converts a headerless signed CSV without --card and reports missing totals', () => {
     const history = join(folder, 'history.csv');

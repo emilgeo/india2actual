@@ -698,3 +698,14 @@ describe('a password protected PDF', () => {
     expect(isPasswordError(new Error('something else'))).toBe(false);
   });
 });
+
+describe('the layout summary beside the tables', () => {
+  it('describes a real PDF and the page count it came from', async () => {
+    const bytes = pdfFromLines(consolidatedLines());
+    const { layout } = await extractTablesFromBytes(bytes, 'test.pdf');
+
+    expect(layout?.pages.length).toBeGreaterThan(0);
+    expect(layout?.pages.every(page => page.items > 0)).toBe(true);
+    expect(layout?.pages.some(page => page.inTable)).toBe(true);
+  });
+});

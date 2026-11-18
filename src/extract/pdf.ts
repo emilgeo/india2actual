@@ -935,6 +935,8 @@ export type PdfPageLayout = {
  */
 export type PdfLayout = {
   pages: PdfPageLayout[];
+  /** The page the window is taken from. */
+  windowPage?: number;
   /** Dated rows no table took, from the first of them on one page, capped. */
   window: LayoutLine[];
   /** Up to two lines directly above the window, nearest last. */
@@ -998,6 +1000,7 @@ export function describePdfLayout(lines: Line[], pages: number): PdfLayout {
     .filter(line => line.page === windowPage);
   return {
     pages: summary,
+    windowPage,
     window: lines.slice(windowStart, windowEnd + 1).slice(0, WINDOW_LINES).map(layoutLine),
     above: above.map(layoutLine),
   };
