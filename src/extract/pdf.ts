@@ -910,15 +910,122 @@ export function tablesFromLines(
   });
 }
 
+/** One line of the text sample: where each item starts and what it says. */
+export type LayoutLine = {
+  /** Whether a transaction date starts any item on the line. */
+  dateLed: boolean;
+  items: Array<{ x: number; text: string }>;
+};
+
+export type PdfPageLayout = {
+  page: number;
+  /** Text items on the page; zero means the page has no text layer. */
+  items: number;
+  lines: number;
+  dateLines: number;
+  /** Lines with two or more amount-shaped items. */
+  amountLines: number;
+  /** Whether any dated line of the page was taken into a table. */
+  inTable: boolean;
+};
+
+/**
+ * What a report needs to tell "no text layer" from "no table recognised".
+ * Raw text: only the report may decide what of it is shown.
+ */
+export type PdfLayout = {
+  pages: PdfPageLayout[];
+  /** Dated rows no table took, from the first of them on one page, capped. */
+  window: LayoutLine[];
+  /** Up to two lines directly above the window, nearest last. */
+  above: LayoutLine[];
+};
+
+const AMOUNT_ITEM = /^\(?-?\d[\d,]*\.\d{2}\)?(\s?(cr|dr))?$/i;
+const WINDOW_LINES = 10;
+const WINDOW_MIN_ROWS = 3;
+const WINDOW_ABOVE = 2;
+
+const amountItems = (line: Line) =>
+  line.items.filter(item => AMOUNT_ITEM.test(item.text.trim())).length;
+
+const layoutLine = (line: Line): LayoutLine => ({
+  dateLed: isAnchorLine(line),
+  items: line.items.map(item => ({ x: item.x, text: item.text })),
+});
+
+/**
+ * Summarise a statement's text lines for a report. Reads the lines the tables
+ * are built from and changes nothing, so importing is unaffected.
+ */
+export function describePdfLayout(lines: Line[], pages: number): PdfLayout {
+  const claimed = new Set(splitSections(lines).flatMap(section => section.lines));
+  const rowLike = (line: Line) => isAnchorLine(line) && amountItems(line) >= 2;
+
+  const summary: PdfPageLayout[] = [];
+  let windowStart = -1;
+  let windowPage = 0;
+
+  for (let page = 1; page <= pages; page += 1) {
+    const onPage = lines.filter(line => line.page === page);
+    summary.push({
+      page,
+      items: onPage.reduce((sum, line) => sum + line.items.length, 0),
+      lines: onPage.length,
+      dateLines: onPage.filter(isAnchorLine).length,
+      amountLines: onPage.filter(line => amountItems(line) >= 2).length,
+      inTable: onPage.some(line => isAnchorLine(line) && claimed.has(line)),
+    });
+    if (windowStart < 0 && onPage.filter(line => rowLike(line) && !claimed.has(line)).length >= WINDOW_MIN_ROWS) {
+      windowPage = page;
+      windowStart = lines.findIndex(line => line.page === page && rowLike(line) && !claimed.has(line));
+    }
+  }
+
+  if (windowStart < 0) {
+    return { pages: summary, window: [], above: [] };
+  }
+
+  let windowEnd = windowStart;
+  for (let i = windowStart; i < lines.length && lines[i]?.page === windowPage; i += 1) {
+    if (rowLike(lines[i] as Line) && !claimed.has(lines[i] as Line)) {
+      windowEnd = i;
+    }
+  }
+
+  const above = lines
+    .slice(Math.max(0, windowStart - WINDOW_ABOVE), windowStart)
+    .filter(line => line.page === windowPage);
+  return {
+    pages: summary,
+    window: lines.slice(windowStart, windowEnd + 1).slice(0, WINDOW_LINES).map(layoutLine),
+    above: above.map(layoutLine),
+  };
+}
+
+export async function extractPdfWithLayout(
+  bytes: Uint8Array,
+  path: string,
+  options: PdfExtractOptions = {},
+): Promise<{ tables: Table[]; layout?: PdfLayout }> {
+  const { lines, pages } = await readLines(bytes, options);
+  const tables = tablesFromLines(lines, {
+    path,
+    format: 'pdf',
+    part: `${pages} page(s)`,
+  });
+  try {
+    return { tables, layout: describePdfLayout(lines, pages) };
+  } catch {
+    // The summary is only for reports, so a fault in it must never fail an import.
+    return { tables };
+  }
+}
+
 export async function extractPdf(
   bytes: Uint8Array,
   path: string,
   options: PdfExtractOptions = {},
 ): Promise<Table[]> {
-  const { lines, pages } = await readLines(bytes, options);
-  return tablesFromLines(lines, {
-    path,
-    format: 'pdf',
-    part: `${pages} page(s)`,
-  });
+  return (await extractPdfWithLayout(bytes, path, options)).tables;
 }
