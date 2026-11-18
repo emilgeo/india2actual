@@ -1,13 +1,17 @@
 name: Readme Actual version
 
-# After a dependency bump lands on main, copy the locked Actual API version into
-# the README line that names it.
+# When a Dependabot pull request changes package-lock.json, commit the locked
+# Actual API version into the README line that names it, on the pull request
+# branch, so the change is reviewed and merged with the bump. A test fails the
+# pull request if the line is still stale.
+#
+# pull_request_target is used because Dependabot pull requests get a read-only
+# token under pull_request. The pull request's files are only read as data: the
+# script runs from the base branch and nothing from the pull request is executed.
 on:
-  push:
-    branches: [main]
+  pull_request_target:
     paths:
       - package-lock.json
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,19 +19,33 @@ permissions:
 
 jobs:
   sync:
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the repository
+      - name: Check out the base branch, which holds the script
         uses: actions/checkout@v7
+        with:
+          path: base
+          persist-credentials: false
+      - name: Check out the pull request branch, as data only
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          path: pr
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Update the README
-        run: node scripts/sync-actual-version.mjs
-      - name: Commit the change
+        run: node base/scripts/sync-actual-version.mjs pr
+      - name: Commit the change to the pull request branch
+        working-directory: pr
         env:
           GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           if git diff --quiet README.md; then
             exit 0
@@ -35,9 +53,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "docs: update the tested Actual version in the readme" README.md
-          git push
+          git push origin "HEAD:refs/heads/$BRANCH"
           # A push made with the workflow token does not start other workflows,
-          # so the site, which is built from the README, and CI, which a release
-          # waits for on this commit, are started explicitly.
-          gh workflow run site.yml
-          gh workflow run ci.yml --ref main
+          # and the new commit needs its own CI run to satisfy the required checks.
+          gh workflow run ci.yml --ref "$BRANCH"
