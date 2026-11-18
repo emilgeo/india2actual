@@ -1,6 +1,7 @@
 import type { Table } from './extract/types.js';
 import type { Interpreted } from './interpret/rows.js';
 import { roleForHeader } from './interpret/synonyms.js';
+import { diagnoseBalance } from './report-diagnosis.js';
 import type { Validation } from './interpret/validate.js';
 
 export type ReportSection = {
@@ -160,6 +161,11 @@ function describeSection(section: ReportSection): string[] {
           ? ''
           : ` (${validation.matched}/${validation.checked} agree)`),
     );
+  }
+
+  const balance = checks.find(check => check.name === 'Balance check');
+  if (!result.card && balance?.validation.status === 'failed') {
+    lines.push('', ...diagnoseBalance(transactions, skipped));
   }
 
   lines.push(

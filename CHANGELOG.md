@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The layout report now says why a balance check failed (for example amounts with
+  the opposite sign, rows out of order, or a column read wrongly), using counts
+  and row positions only, never amounts or dates.
+
 ## 0.5.4 - 2026-11-17
 
 ### Added

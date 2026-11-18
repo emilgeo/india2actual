@@ -101,6 +101,24 @@ describe('buildReport', () => {
     expect(text).toMatch(/Balance check: passed \(\d+\/\d+ agree\)/);
   });
 
+  it('explains a failed balance check without printing any value', () => {
+    const failing = ROWS.map(row => [...row]);
+    // The second balance is wrong, so the check fails.
+    failing[3]![4] = '8,123.00';
+    const text = report(table(failing));
+
+    expect(text).toMatch(/Balance check: failed/);
+    expect(text).toContain('Why the balance check failed:');
+    expect(text).toContain('Failing pairs: 1 of 1');
+    const section = text.split('Why the balance check failed:')[1]!.split('\n\n')[0]!;
+    expect(section).not.toMatch(/\d[\d,]*\.\d{2}|\d{2}[/-]\d{2}[/-]\d{4}/);
+    expect(section).not.toMatch(/ACME|swiggy|JOHN|OTHER/);
+  });
+
+  it('adds no diagnosis to a passing check', () => {
+    expect(report(table(ROWS))).not.toContain('Why the balance check failed');
+  });
+
   it('never prints values from the statement', () => {
     const text = report(table(ROWS));
 
