@@ -59,7 +59,7 @@
   },
   "devDependencies": {
     "@actual-app/sync-server": "^26.11.0",
-    "@playwright/test": "^1.65.0",
+    "@playwright/test": "^1.65.1",
     "@types/chrome": "^0.3.7",
     "@types/node": "^22.10.0",
     "esbuild": "^0.28.2",
